@@ -117,7 +117,8 @@ exports.sendOtp = async (req, res) => {
       message: 'OTP sent successfully',
       data: {
         phoneNumber: cleanPhone,
-        expiresIn: 120 // seconds
+        expiresIn: 120, // seconds
+        otp
       }
     });
   } catch (error) {

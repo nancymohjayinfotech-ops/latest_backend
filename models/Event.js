@@ -57,10 +57,5 @@ eventSchema.pre('save', function(next) {
     next();
 });
 
-// Index for better query performance
-eventSchema.index({ slug: 1 });
-eventSchema.index({ createdBy: 1 });
-eventSchema.index({ createdAt: -1 });
-eventSchema.index({ title: 'text', description: 'text', location: 'text' });
 
 module.exports = mongoose.model('Event', eventSchema);
