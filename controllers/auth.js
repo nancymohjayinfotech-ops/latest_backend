@@ -28,9 +28,11 @@ const generateSessionToken = () => {
 
 // Phone validation function
 const validatePhoneNumber = (phone) => {
+  // Convert to string if it's not already
+  const phoneStr = String(phone || '');
   // Basic phone validation - adjust regex based on your requirements
   const phoneRegex = /^[+]?[1-9]\d{1,14}$/;
-  return phoneRegex.test(phone.replace(/[\s-()]/g, ''));
+  return phoneRegex.test(phoneStr.replace(/[\s-()]/g, ''));
 };
 
 // SMS placeholder function
@@ -63,7 +65,7 @@ exports.sendOtp = async (req, res) => {
     }
 
     // Clean phone number
-    const cleanPhone = phoneNumber.replace(/[\s-()]/g, '');
+    const cleanPhone = String(phoneNumber || '').replace(/[\s-()]/g, '');
 
     // Find or create user
     let user = await User.findOne({ phoneNumber: cleanPhone,role:role });
@@ -152,7 +154,7 @@ exports.verifyOtp = async (req, res) => {
     }
 
     // Clean phone number
-    const cleanPhone = phoneNumber.replace(/[\s-()]/g, '');
+    const cleanPhone = String(phoneNumber || '').replace(/[\s-()]/g, '');
 
     // Find user
     const user = await User.findOne({ phoneNumber: cleanPhone });
