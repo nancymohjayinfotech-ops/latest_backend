@@ -147,6 +147,57 @@ const userSchema = new mongoose.Schema({
   isInterestsSet: {
     type: Boolean,
     default: false
+  },
+  isActive: {
+    type: Boolean,
+    default: true
+  },
+  // Instructor availability slots
+  availabilitySlots: [{
+    startTime: {
+      type: String, // Format: "HH:MM" (24-hour format)
+      required: function() { return this.role === 'instructor'; }
+    },
+    endTime: {
+      type: String, // Format: "HH:MM" (24-hour format)
+      required: function() { return this.role === 'instructor'; }
+    },
+    dayOfWeek: {
+      type: String,
+      enum: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
+      required: function() { return this.role === 'instructor'; }
+    },
+    isActive: {
+      type: Boolean,
+      default: true
+    }
+  }],
+  // Notification preferences
+  notificationPreferences: {
+    session: {
+      type: Boolean,
+      default: true
+    },
+    messages: {
+      type: Boolean,
+      default: false
+    },
+    feedBack: {
+      type: Boolean,
+      default: true
+    },
+    newEnrollments: {
+      type: Boolean,
+      default: true
+    },
+    reviews: {
+      type: Boolean,
+      default: true
+    },
+    messages: {
+      type: Boolean,
+      default: true
+    }
   }
 }, {
   timestamps: true

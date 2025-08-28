@@ -16,8 +16,6 @@ router.use(protect, authorize('instructor'));
  * @access  Private (Instructor only)
  */
 router.get('/courses', (req, res) => {
-  // Add instructor filter to query params
-  req.query.instructor = req.user.id;
   courseController.getAllCourses(req, res);
 });
 
@@ -36,18 +34,46 @@ router.get('/all-courses', courseController.getAllCourses);
 router.get('/courses/with-students', instructorController.getCoursesWithEnrolledStudents);
 
 /**
+ * @route   GET /api/instructor/students
+ * @desc    Get all students enrolled in instructor's courses
+ * @access  Private (Instructor only)
+ */
+router.get('/students', instructorController.getAllEnrolledStudents);
+
+/**
+ * @route   PUT /api/instructor/slots
+ * @desc    Update instructor availability slots
+ * @access  Private (Instructor only)
+ */
+router.put('/slots', instructorController.updateInstructorSlots);
+
+/**
+ * @route   GET /api/instructor/slots
+ * @desc    Get instructor availability slots
+ * @access  Private (Instructor only)
+ */
+router.get('/slots', instructorController.getInstructorSlots);
+
+/**
+ * @route   PUT /api/instructor/notifications
+ * @desc    Update user notification preferences
+ * @access  Private (Authenticated users)
+ */
+router.put('/notifications', instructorController.updateNotificationPreferences);
+
+/**
+ * @route   GET /api/instructor/notifications/preferences
+ * @desc    Get user notification preferences
+ * @access  Private (Authenticated users)
+ */
+router.get('/notifications/preferences', instructorController.getNotificationPreferences);
+
+/**
  * @route   GET /api/instructor/courses/stats
  * @desc    Get instructor course statistics (count, enrolled students)
  * @access  Private (Instructor only)
  */
 router.get('/courses/stats', instructorController.getInstructorStats);
-
-/**
- * @route   GET /api/instructor/ratings
- * @desc    Get instructor ratings based on course ratings
- * @access  Private (Instructor only)
- */
-router.get('/ratings', instructorController.getInstructorRatings);
 
 /**
  * @route   GET /api/instructor/reviews

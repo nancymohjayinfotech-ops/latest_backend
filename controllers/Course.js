@@ -427,7 +427,10 @@ const getAllCourses = async (req, res) => {
       query.published = req.query.published === 'true';
     }
     
-    if (req.query.instructor) {
+    if (req.query.instructor && req.user.role === 'instructor') {
+      query.instructor = req.user.id;
+    }
+    else if (req.query.instructor) {
       query.instructor = req.query.instructor;
     }
     

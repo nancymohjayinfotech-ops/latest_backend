@@ -60,42 +60,26 @@ const getInstructorStats = async (req, res) => {
   }
 };
 
-const getInstructorRatings = async (req, res) => {
+const getInstructorReviews = async (req, res) => {
   try {
     const instructorId = req.user.id;
     
+    // Get instructor details
+    const instructor = await User.findById(instructorId)
+      .select('name bio avatar');
+    
+    // Extract pagination parameters
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+    
     // Get all courses by this instructor
     const courses = await Course.find({ instructor: instructorId })
-      .select('title slug ratings averageRating');
-    
-    // Process ratings data
-    const courseRatings = courses.map(course => {
-      // Calculate rating distribution
-      const distribution = {
-        5: 0,
-        4: 0,
-        3: 0,
-        2: 0,
-        1: 0
-      };
-      
-      if (course.ratings && course.ratings.length > 0) {
-        course.ratings.forEach(rating => {
-          if (distribution[rating.rating] !== undefined) {
-            distribution[rating.rating]++;
-          }
-        });
-      }
-      
-      return {
-        courseId: course._id,
-        title: course.title,
-        slug: course.slug,
-        averageRating: course.averageRating || 0,
-        totalRatings: course.ratings ? course.ratings.length : 0,
-        distribution
-      };
-    });
+      .select('title slug ratings averageRating')
+      .populate({
+        path: 'ratings.user',
+        select: 'name avatar'
+      });
     
     // Calculate overall instructor rating
     let totalRatings = 0;
@@ -108,43 +92,7 @@ const getInstructorRatings = async (req, res) => {
       }
     });
     
-    const overallRating = ratingCount > 0 ? (totalRatings / ratingCount).toFixed(1) : 0;
-    
-    return res.status(200).json({
-      success: true,
-      message: 'Instructor ratings retrieved successfully',
-      data: {
-        overallRating,
-        totalRatings: ratingCount,
-        courseRatings
-      }
-    });
-  } catch (error) {
-    console.error('Error getting instructor ratings:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Error getting instructor ratings',
-      error: error.message
-    });
-  }
-};
-
-const getInstructorReviews = async (req, res) => {
-  try {
-    const instructorId = req.user.id;
-    
-    // Extract pagination parameters
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const skip = (page - 1) * limit;
-    
-    // Get all courses by this instructor
-    const courses = await Course.find({ instructor: instructorId })
-      .select('title slug ratings')
-      .populate({
-        path: 'ratings.user',
-        select: 'name avatar'
-      });
+    const overallRating = ratingCount > 0 ? parseFloat((totalRatings / ratingCount).toFixed(1)) : 0;
     
     // Extract all reviews with course information
     let allReviews = [];
@@ -184,6 +132,13 @@ const getInstructorReviews = async (req, res) => {
       success: true,
       message: 'Instructor reviews retrieved successfully',
       data: {
+        instructor: {
+          name: instructor.name,
+          bio: instructor.bio,
+          avatar: instructor.avatar,
+          averageRating: overallRating,
+          totalRatings: ratingCount
+        },
         reviews: paginatedReviews,
         pagination: {
           currentPage: page,
@@ -415,12 +370,325 @@ const getCoursesWithEnrolledStudents = async (req, res) => {
   }
 };
 
+const getAllEnrolledStudents = async (req, res) => {
+  try {
+    const instructorId = req.user.id;
+    
+    // Extract pagination and filter parameters
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+    const isActive = req.query.isActive;
+    const searchQuery = req.query.search;
+    
+    // Build populate match conditions
+    const populateMatch = {};
+    if (isActive !== undefined) {
+      populateMatch.isActive = isActive === 'true';
+    }
+    
+    // Get all courses by this instructor
+    const courses = await Course.find({ instructor: instructorId })
+      .select('_id title slug enrolledStudents')
+      .populate({
+        path: 'enrolledStudents',
+        select: 'name email avatar isActive studentId createdAt',
+        match: populateMatch
+      });
+    
+    // Extract all unique students from all courses
+    const studentMap = new Map();
+    const studentCourses = new Map();
+    
+    courses.forEach(course => {
+      if (course.enrolledStudents && course.enrolledStudents.length > 0) {
+        course.enrolledStudents.forEach(student => {
+          const studentId = student._id.toString();
+          
+          // Add student to map if not already present
+          if (!studentMap.has(studentId)) {
+            studentMap.set(studentId, {
+              _id: student._id,
+              name: student.name,
+              email: student.email,
+              avatar: student.avatar,
+              isActive: student.isActive,
+              studentId: student.studentId,
+              enrolledAt: student.createdAt,
+            });
+            studentCourses.set(studentId, []);
+          }
+        });
+      }
+    });
+    
+    // Convert map to array and add course information
+    let allStudents = Array.from(studentMap.values()).map(student => ({
+      ...student,
+      totalCourses: studentCourses.get(student._id.toString()).length
+    }));
+    
+    // Apply search filter if provided
+    if (searchQuery && searchQuery.trim() !== '') {
+      const query = searchQuery.toLowerCase().trim();
+      allStudents = allStudents.filter(student => {
+        const nameMatch = student.name && student.name.toLowerCase().includes(query);
+        const studentIdMatch = student.studentId && student.studentId.toLowerCase().includes(query);
+        const emailMatch = student.email && student.email.toLowerCase().includes(query);
+        
+        return nameMatch || studentIdMatch || emailMatch;
+      });
+    }
+    
+    // Sort students by enrollment date (newest first)
+    allStudents.sort((a, b) => new Date(b.enrolledAt) - new Date(a.enrolledAt));
+    
+    // Apply pagination
+    const paginatedStudents = allStudents.slice(skip, skip + limit);
+    
+    // Calculate pagination metadata
+    const totalStudents = allStudents.length;
+    const totalPages = Math.ceil(totalStudents / limit);
+    const hasNextPage = page < totalPages;
+    const hasPrevPage = page > 1;
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Enrolled students retrieved successfully',
+      data: {
+        students: paginatedStudents,
+        pagination: {
+          currentPage: page,
+          totalPages,
+          totalStudents,
+          limit,
+          hasNextPage,
+          hasPrevPage
+        },
+        filters: {
+          isActive: isActive,
+          searchQuery: searchQuery
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error getting enrolled students:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error getting enrolled students',
+      error: error.message
+    });
+  }
+};
+
+const updateInstructorSlots = async (req, res) => {
+  try {
+    const instructorId = req.user.id;
+    const { availabilitySlots } = req.body;
+
+    // Validate that user is an instructor
+    if (req.user.role !== 'instructor') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only instructors can update availability slots'
+      });
+    }
+
+    // Validate slots format
+    if (!Array.isArray(availabilitySlots)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Availability slots must be an array'
+      });
+    }
+
+    const validDays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
+
+    for (const slot of availabilitySlots) {
+      if (!slot.startTime || !slot.endTime || !slot.dayOfWeek) {
+        return res.status(400).json({
+          success: false,
+          message: 'Each slot must have startTime, endTime, and dayOfWeek'
+        });
+      }
+
+      if (!timeRegex.test(slot.startTime) || !timeRegex.test(slot.endTime)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Time format must be HH:MM (24-hour format)'
+        });
+      }
+
+      if (!validDays.includes(slot.dayOfWeek.toLowerCase())) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid day of week'
+        });
+      }
+
+      const [startHour, startMin] = slot.startTime.split(':').map(Number);
+      const [endHour, endMin] = slot.endTime.split(':').map(Number);
+      const startMinutes = startHour * 60 + startMin;
+      const endMinutes = endHour * 60 + endMin;
+
+      if (startMinutes >= endMinutes) {
+        return res.status(400).json({
+          success: false,
+          message: 'Start time must be before end time'
+        });
+      }
+    }
+
+    // Update instructor availability slots
+    const updatedInstructor = await User.findByIdAndUpdate(
+      instructorId,
+      { availabilitySlots },
+      { new: true, runValidators: true }
+    ).select('name email availabilitySlots');
+
+    return res.status(200).json({
+      success: true,
+      message: 'Availability slots updated successfully',
+      data: {
+        instructor: updatedInstructor
+      }
+    });
+
+  } catch (error) {
+    console.error('Error updating instructor slots:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error updating availability slots',
+      error: error.message
+    });
+  }
+};
+
+const updateNotificationPreferences = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { notificationPreferences } = req.body;
+
+    if (!notificationPreferences || typeof notificationPreferences !== 'object') {
+      return res.status(400).json({
+        success: false,
+        message: 'Notification preferences must be provided as an object'
+      });
+    }
+
+    const validPreferences = ['session', 'messages','feedBack','newEnrollments','reviews'];
+    const updateData = {};
+
+    for (const [key, value] of Object.entries(notificationPreferences)) {
+      if (!validPreferences.includes(key)) {
+        return res.status(400).json({
+          success: false,
+          message: `Invalid notification preference: ${key}`
+        });
+      }
+
+      if (typeof value !== 'boolean') {
+        return res.status(400).json({
+          success: false,
+          message: `Notification preference ${key} must be a boolean value`
+        });
+      }
+
+      updateData[`notificationPreferences.${key}`] = value;
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    ).select('name email role notificationPreferences');
+
+    return res.status(200).json({
+      success: true,
+      message: 'Notification preferences updated successfully',
+      data: {
+        user: updatedUser
+      }
+    });
+
+  } catch (error) {
+    console.error('Error updating notification preferences:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error updating notification preferences',
+      error: error.message
+    });
+  }
+};
+
+const getInstructorSlots = async (req, res) => {
+  try {
+    const instructorId = req.user.id;
+
+    if (req.user.role !== 'instructor') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only instructors can view availability slots'
+      });
+    }
+
+    const instructor = await User.findById(instructorId)
+      .select('name email availabilitySlots');
+
+    return res.status(200).json({
+      success: true,
+      message: 'Availability slots retrieved successfully',
+      data: {
+        instructor
+      }
+    });
+
+  } catch (error) {
+    console.error('Error getting instructor slots:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error retrieving availability slots',
+      error: error.message
+    });
+  }
+};
+
+const getNotificationPreferences = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const user = await User.findById(userId)
+      .select('name email role notificationPreferences');
+
+    return res.status(200).json({
+      success: true,
+      message: 'Notification preferences retrieved successfully',
+      data: {
+        user
+      }
+    });
+
+  } catch (error) {
+    console.error('Error getting notification preferences:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error retrieving notification preferences',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   getInstructorStats,
-  getInstructorRatings,
   getInstructorReviews,
   getCourseFeedback,
   updateInstructorProfile,
   getInstructorNotifications,
-  getCoursesWithEnrolledStudents
+  getCoursesWithEnrolledStudents,
+  getAllEnrolledStudents,
+  updateInstructorSlots,
+  updateNotificationPreferences,
+  getInstructorSlots,
+  getNotificationPreferences
 };
