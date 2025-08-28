@@ -424,8 +424,7 @@ const getAllEnrolledStudents = async (req, res) => {
     
     // Convert map to array and add course information
     let allStudents = Array.from(studentMap.values()).map(student => ({
-      ...student,
-      totalCourses: studentCourses.get(student._id.toString()).length
+      ...student
     }));
     
     // Apply search filter if provided

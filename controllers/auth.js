@@ -67,6 +67,13 @@ exports.sendOtp = async (req, res) => {
 
     // Find or create user
     let user = await User.findOne({ phoneNumber: cleanPhone,role:role });
+
+    if (user && user.role !== role) {
+      return res.status(400).json({
+        success: false,
+        message: `Phone number already registered as ${user.role}`
+      });
+    }
     
     if (!user) {
       // Create new user with phone number
@@ -76,6 +83,7 @@ exports.sendOtp = async (req, res) => {
         role: role
       });
     }
+
 
     // Check rate limiting - max 3 attempts in 10 minutes
     const now = new Date();
