@@ -112,10 +112,9 @@ router.post('/multiple', protect, uploadMultiple('files', 10), async (req, res) 
   }
 });
 
-// @desc    Upload profile image (dedicated endpoint)
-// @route   POST /api/uploads/profile
-// @access  Private
 router.post('/profile', protect, (req, res, next) => {
+  // Initialize req.body if undefined and set upload type
+  if (!req.body) req.body = {};
   req.body.uploadType = 'profile';
   next();
 }, uploadSingle('avatar'), async (req, res) => {
