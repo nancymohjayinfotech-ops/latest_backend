@@ -37,6 +37,8 @@ exports.createMessage = async (req, res) => {
       senderId: req.user.id, // From auth middleware
       senderName: req.user.name || req.body.senderName,
       content: req.body.content,
+      isEdited: false,
+      isSystemMessage: req.body.isSystemMessage || false,
       messageType: req.body.messageType || 'text'
     };
 
@@ -125,7 +127,9 @@ exports.getMessagesByGroupId = async (req, res) => {
     // Add read status for current user and read count
     const messagesWithReadStatus = messages.map(message => {
       const messageObj = message.toObject ? message.toObject() : message;
-      const isReadByCurrentUser = messageObj.readBy?.some(read => read.userId.toString() === userId.toString()) || false;
+      const isReadByCurrentUser = messageObj.readBy?.some(read => 
+        read && read.userId && read.userId.toString() === userId.toString()
+      ) || false;
       const readCount = messageObj.readBy?.length || 0;
       
       return {

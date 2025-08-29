@@ -1,5 +1,6 @@
 const messageController = require('../controllers/Message');
 const { getEncryptionInstance } = require('../utils/encryption');
+const Message = require('../models/Message');
 
 function initializeSocket(io) {
   io.on('connection', (socket) => {
@@ -51,8 +52,6 @@ function initializeSocket(io) {
     // Handle new message from socket
     socket.on('sendMessage', async (data) => {
       try {
-        console.log('Message received via socket:', data.groupId);
-        
         // Check if user is authenticated
         if (!socket.userData || !socket.userData.userId) {
           socket.emit('messageError', {
@@ -78,7 +77,6 @@ function initializeSocket(io) {
         // The message is already decrypted by the model's toJSON transform
         io.to(data.groupId).emit('newMessage', savedMessage);
       } catch (error) {
-        console.error('Error handling socket message:', error);
         // Send error back to sender only
         socket.emit('messageError', {
           error: 'Failed to save message',
@@ -90,7 +88,7 @@ function initializeSocket(io) {
     // Handle message typing indicator
     socket.on('typing', (data) => {
       // Broadcast to everyone except sender
-      socket.to(data.groupId).emit('userTyping', {
+      socket.to(data.groupId).emit('typingStatus', {
         userId: data.userId,
         name: data.name,
         groupId: data.groupId,
@@ -100,21 +98,44 @@ function initializeSocket(io) {
     
     // Handle message read receipts
     socket.on('messageRead', async (data) => {
-      // Broadcast to everyone except sender
-      socket.to(data.groupId).emit('messageReadReceipt', {
-        messageId: data.messageId,
-        userId: data.userId,
-        groupId: data.groupId,
-        timestamp: new Date()
-      });
-    });
-    
-    // Handle disconnect
-    socket.on('disconnect', () => {
-      console.log('Client disconnected', socket.id);
-      
-      // If we had stored which rooms this socket was in, we could notify them
-      // For now, we don't track this information across the socket lifetime
+      try {
+        // Check if user already marked this message as read
+        const message = await Message.findById(data.messageId);
+        if (message) {
+          const alreadyRead = message.readBy.some(read => 
+            read.userId && read.userId.toString() === data.userId.toString()
+          );
+          
+          if (!alreadyRead) {
+            // Mark message as read in database with explicit userId
+            const updateResult = await Message.findByIdAndUpdate(
+              data.messageId, 
+              {
+                $push: {
+                  readBy: {
+                    userId: data.userId,
+                    readAt: new Date()
+                  }
+                }
+              },
+              { new: true } // Return the updated document
+            );
+          }
+          
+          // Broadcast to everyone except sender
+          socket.to(data.groupId).emit('messageReadReceipt', {
+            messageId: data.messageId,
+            userId: data.userId,
+            groupId: data.groupId,
+            timestamp: new Date()
+          });
+        }
+      } catch (error) {
+        socket.emit('messageError', {
+          error: 'Failed to mark message as read',
+          originalMessage: { messageId: data.messageId }
+        });
+      }
     });
   });
 }

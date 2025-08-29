@@ -392,7 +392,7 @@ const getAllEnrolledStudents = async (req, res) => {
       .select('_id title slug enrolledStudents')
       .populate({
         path: 'enrolledStudents',
-        select: 'name email avatar isActive studentId createdAt',
+        select: 'name email phone avatar isActive studentId',
         match: populateMatch
       });
     
@@ -411,21 +411,32 @@ const getAllEnrolledStudents = async (req, res) => {
               _id: student._id,
               name: student.name,
               email: student.email,
+              phone: student.phone || '',
               avatar: student.avatar,
               isActive: student.isActive,
               studentId: student.studentId,
-              enrolledAt: student.createdAt,
             });
             studentCourses.set(studentId, []);
           }
+          
+          // Add course to student's courses
+          studentCourses.get(studentId).push({
+            courseId: course._id,
+            title: course.title,
+            slug: course.slug
+          });
         });
       }
     });
     
     // Convert map to array and add course information
-    let allStudents = Array.from(studentMap.values()).map(student => ({
-      ...student
-    }));
+    let allStudents = Array.from(studentMap.values()).map(student => {
+      const studentId = student._id.toString();
+      return {
+        ...student,
+        courses: studentCourses.get(studentId) || []
+      };
+    });
     
     // Apply search filter if provided
     if (searchQuery && searchQuery.trim() !== '') {
@@ -440,7 +451,7 @@ const getAllEnrolledStudents = async (req, res) => {
     }
     
     // Sort students by enrollment date (newest first)
-    allStudents.sort((a, b) => new Date(b.enrolledAt) - new Date(a.enrolledAt));
+    allStudents.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     
     // Apply pagination
     const paginatedStudents = allStudents.slice(skip, skip + limit);

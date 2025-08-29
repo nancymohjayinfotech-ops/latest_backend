@@ -1,809 +1,912 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Instructor Chat - LMS</title>
     <script src="/socket.io/socket.io.js"></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: grid;
-            grid-template-columns: 300px 1fr;
-            gap: 20px;
-            height: 90vh;
-        }
-        .sidebar {
-            background: white;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        .chat-area {
-            background: white;
-            border-radius: 8px;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        .chat-header {
-            padding: 20px;
-            border-bottom: 1px solid #eee;
-            background: #4CAF50;
-            color: white;
-            border-radius: 8px 8px 0 0;
-        }
-        .messages {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
-            max-height: 400px;
-        }
-        .message {
-            margin-bottom: 15px;
-            padding: 10px;
-            border-radius: 8px;
-            background: #f8f9fa;
-        }
-        .message.own {
-            background: #e3f2fd;
-            margin-left: 50px;
-        }
-        .message-header {
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 5px;
-        }
-        .message-time {
-            font-size: 12px;
-            color: #666;
-            margin-left: 10px;
-        }
-        .input-area {
-            padding: 20px;
-            border-top: 1px solid #eee;
-            display: flex;
-            gap: 10px;
-        }
-        .input-area input {
-            flex: 1;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-        .btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-        .btn-primary {
-            background: #4CAF50;
-            color: white;
-        }
-        .btn-secondary {
-            background: #2196F3;
-            color: white;
-        }
-        .btn-danger {
-            background: #f44336;
-            color: white;
-        }
-        .form-group {
-            margin-bottom: 15px;
-        }
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-        .form-group input, .form-group select {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-        .group-list {
-            max-height: 200px;
-            overflow-y: auto;
-        }
-        .group-item {
-            padding: 10px;
-            border: 1px solid #ddd;
-            margin-bottom: 5px;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        .student-item {
-            padding: 8px;
-            border: 1px solid #ddd;
-            margin-bottom: 5px;
-            border-radius: 4px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: #f9f9f9;
-        }
-        .student-info {
-            flex: 1;
-        }
-        .add-student-btn {
-            background: #4CAF50;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 3px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        .add-student-btn:hover {
-            background: #45a049;
-        }
-        .add-student-btn:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-        }
-        .group-item:hover {
-            background: #f0f0f0;
-        }
-        .group-item.active {
-            background: #e3f2fd;
-            border-color: #2196F3;
-        }
-        .status {
-            padding: 10px;
-            margin: 10px 0;
-            border-radius: 4px;
-        }
-        .status.success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-        .status.error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background-color: #f5f5f5;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: 300px 1fr;
+        gap: 20px;
+        height: 90vh;
+      }
+      .sidebar {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      .chat-area {
+        background: white;
+        border-radius: 8px;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      .chat-header {
+        padding: 20px;
+        border-bottom: 1px solid #eee;
+        background: #4caf50;
+        color: white;
+        border-radius: 8px 8px 0 0;
+      }
+      .messages {
+        flex: 1;
+        padding: 20px;
+        overflow-y: auto;
+        max-height: 400px;
+      }
+      .message {
+        margin-bottom: 15px;
+        padding: 10px;
+        border-radius: 8px;
+        background: #f8f9fa;
+      }
+      .message.own {
+        background: #e3f2fd;
+        margin-left: 50px;
+      }
+      .message.system {
+        background: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeeba;
+        font-style: italic;
+        text-align: center;
+        padding: 8px 15px;
+      }
+      .message-header {
+        font-weight: bold;
+        color: #333;
+        margin-bottom: 5px;
+      }
+      .message.system .message-header {
+        color: #856404;
+        font-weight: normal;
+      }
+      .message-time {
+        font-size: 12px;
+        color: #666;
+        margin-left: 10px;
+      }
+      .input-area {
+        padding: 20px;
+        border-top: 1px solid #eee;
+        display: flex;
+        gap: 10px;
+      }
+      .input-area input {
+        flex: 1;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+      }
+      .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+      }
+      .btn-primary {
+        background: #4caf50;
+        color: white;
+      }
+      .btn-secondary {
+        background: #2196f3;
+        color: white;
+      }
+      .btn-danger {
+        background: #f44336;
+        color: white;
+      }
+      .form-group {
+        margin-bottom: 15px;
+      }
+      .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+      }
+      .form-group input,
+      .form-group select {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+      }
+      .group-list {
+        max-height: 200px;
+        overflow-y: auto;
+      }
+      .group-item {
+        padding: 10px;
+        border: 1px solid #ddd;
+        margin-bottom: 5px;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .student-item {
+        padding: 8px;
+        border: 1px solid #ddd;
+        margin-bottom: 5px;
+        border-radius: 4px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #f9f9f9;
+      }
+      .student-info {
+        flex: 1;
+      }
+      .add-student-btn {
+        background: #4caf50;
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        border-radius: 3px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+      .add-student-btn:hover {
+        background: #45a049;
+      }
+      .add-student-btn:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+      .group-item:hover {
+        background: #f0f0f0;
+      }
+      .group-item.active {
+        background: #e3f2fd;
+        border-color: #2196f3;
+      }
+      .status {
+        padding: 10px;
+        margin: 10px 0;
+        border-radius: 4px;
+      }
+      .status.error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <div class="sidebar">
-            <h3>Instructor Panel</h3>
-            
-            <!-- Login Section -->
-            <div id="loginSection">
-                <div class="form-group">
-                    <label>Choose Login Method:</label>
-                    <select id="loginMethod" onchange="toggleLoginMethod()">
-                        <option value="phone">Phone Number</option>
-                        <option value="google">Google Account</option>
-                    </select>
-                </div>
-                
-                <!-- Phone Login -->
-                <div id="phoneLogin">
-                    <div class="form-group">
-                        <label>Phone Number:</label>
-                        <input type="tel" id="phoneNumber" placeholder="+1234567890">
-                    </div>
-                    <div class="form-group">
-                        <label>Role:</label>
-                        <select id="role">
-                            <option value="instructor" selected>Instructor</option>
-                            <option value="student">Student</option>
-                        </select>
-                    </div>
-                    <button class="btn btn-primary" onclick="sendOtp()" id="sendOtpBtn">Send OTP</button>
-                    
-                    <div id="otpSection" style="display: none;">
-                        <div class="form-group">
-                            <label>Enter OTP:</label>
-                            <input type="text" id="otp" placeholder="123456" maxlength="6">
-                        </div>
-                        <button class="btn btn-primary" onclick="verifyOtp()">Verify OTP</button>
-                    </div>
-                </div>
-                
-                <!-- Google Login -->
-                <div id="googleLogin" style="display: none;">
-                    <div id="g_id_onload"
-                         data-client_id="YOUR_GOOGLE_CLIENT_ID"
-                         data-callback="handleCredentialResponse">
-                    </div>
-                    <div class="g_id_signin" data-type="standard"></div>
-                    <p><small>Note: Google login defaults to student role</small></p>
-                </div>
-            </div>
+      <div class="sidebar">
+        <h3>Instructor Panel</h3>
 
-            <!-- Main Panel (hidden initially) -->
-            <div id="mainPanel" style="display: none;">
-                <div class="form-group">
-                    <label>User ID:</label>
-                    <input type="text" id="userId" placeholder="Enter your user ID">
-                </div>
-                <div class="form-group">
-                    <label>Name:</label>
-                    <input type="text" id="userName" placeholder="Enter your name">
-                </div>
-                <button class="btn btn-secondary" onclick="authenticate()">Connect to Chat</button>
-                
-                <hr>
-                
-                <!-- Add Student Section -->
-                <h4>Add Student to Group</h4>
-                <button class="btn btn-secondary" onclick="loadStudentList()" id="loadStudentsBtn">Load Students</button>
-                
-                <div id="studentsList" class="group-list" style="display: none; margin-top: 10px;">
-                    <h5>Available Students:</h5>
-                    <div id="studentsContainer"></div>
-                </div>
-                
-                <hr>
-                
-                <!-- Groups List -->
-                <h4>My Groups</h4>
-                <button class="btn btn-secondary" onclick="loadGroups()">Load Groups</button>
-                <div id="groupsList" class="group-list"></div>
-            </div>
+        <!-- Login Section -->
+        <div id="loginSection">
+          <div class="form-group">
+            <label>Choose Login Method:</label>
+            <select id="loginMethod" onchange="toggleLoginMethod()">
+              <option value="phone">Phone Number</option>
+              <option value="google">Google Account</option>
+            </select>
+          </div>
 
-            <div id="status"></div>
+          <!-- Phone Login -->
+          <div id="phoneLogin">
+            <div class="form-group">
+              <label>Phone Number:</label>
+              <input type="tel" id="phoneNumber" placeholder="+1234567890" />
+            </div>
+            <div class="form-group">
+              <label>Role:</label>
+              <select id="role">
+                <option value="instructor" selected>Instructor</option>
+                <option value="student">Student</option>
+              </select>
+            </div>
+            <button class="btn btn-primary" onclick="sendOtp()" id="sendOtpBtn">
+              Send OTP
+            </button>
+
+            <div id="otpSection" style="display: none">
+              <div class="form-group">
+                <label>Enter OTP:</label>
+                <input
+                  type="text"
+                  id="otp"
+                  placeholder="123456"
+                  maxlength="6"
+                />
+              </div>
+              <button class="btn btn-primary" onclick="verifyOtp()">
+                Verify OTP
+              </button>
+            </div>
+          </div>
+
+          <!-- Google Login -->
+          <div id="googleLogin" style="display: none">
+            <div
+              id="g_id_onload"
+              data-client_id="YOUR_GOOGLE_CLIENT_ID"
+              data-callback="handleCredentialResponse"
+            ></div>
+            <div class="g_id_signin" data-type="standard"></div>
+            <p><small>Note: Google login defaults to student role</small></p>
+          </div>
         </div>
 
-        <div class="chat-area">
-            <div class="chat-header">
-                <h3 id="chatTitle">Select a group to start chatting</h3>
-            </div>
-            <div id="messages" class="messages"></div>
-            <div class="input-area">
-                <input type="text" id="messageInput" placeholder="Type your message..." onkeypress="handleKeyPress(event)">
-                <button class="btn btn-primary" onclick="sendMessage()">Send</button>
-            </div>
+        <!-- Main Panel (hidden initially) -->
+        <div id="mainPanel" style="display: none">
+          <div class="form-group">
+            <label>User ID:</label>
+            <input type="text" id="userId" placeholder="Enter your user ID" />
+          </div>
+          <div class="form-group">
+            <label>Name:</label>
+            <input type="text" id="userName" placeholder="Enter your name" />
+          </div>
+          <button class="btn btn-secondary" onclick="authenticate()">
+            Connect to Chat
+          </button>
+
+          <hr />
+
+          <!-- Add Student Section -->
+          <h4>Add Student to Group</h4>
+          <button
+            class="btn btn-secondary"
+            onclick="loadStudentList()"
+            id="loadStudentsBtn"
+          >
+            Load Students
+          </button>
+
+          <div
+            id="studentsList"
+            class="group-list"
+            style="display: none; margin-top: 10px"
+          >
+            <h5>Available Students:</h5>
+            <div id="studentsContainer"></div>
+          </div>
+
+          <hr />
+
+          <!-- Groups List -->
+          <h4>My Groups</h4>
+          <button class="btn btn-secondary" onclick="loadGroups()">
+            Load Groups
+          </button>
+          <div id="groupsList" class="group-list"></div>
         </div>
+
+        <div id="status"></div>
+      </div>
+
+      <div class="chat-area">
+        <div class="chat-header">
+          <h3 id="chatTitle">Select a group to start chatting</h3>
+        </div>
+        <div id="messages" class="messages"></div>
+        <div id="typing-indicator" style="font-style: italic; color: gray; margin: 5px;"></div>
+        <div class="input-area">
+          <input
+            type="text"
+            id="messageInput"
+            placeholder="Type your message..."
+            onkeypress="handleKeyPress(event)"
+          />
+          <button class="btn btn-primary" onclick="sendMessage()">Send</button>
+        </div>
+      </div>
     </div>
 
     <script>
-        let socket;
-        let currentUser = null;
-        let currentGroup = null;
-        let authToken = null;
+      let socket;
+      let currentUser = null;
+      let currentGroup = null;
+      let authToken = null;
 
-        // Check for existing session on page load
-        window.addEventListener('load', () => {
-            checkExistingSession();
+      // Check for existing session on page load
+      window.addEventListener("load", () => {
+        checkExistingSession();
+      });
+
+      function checkExistingSession() {
+        const savedToken = localStorage.getItem("authToken");
+        const savedUser = localStorage.getItem("currentUser");
+
+        if (savedToken && savedUser) {
+          try {
+            authToken = savedToken;
+            currentUser = JSON.parse(savedUser);
+
+            // Restore UI state
+            document.getElementById("userId").value = currentUser._id;
+            document.getElementById("userName").value = currentUser.name;
+            document.getElementById("loginSection").style.display = "none";
+            document.getElementById("mainPanel").style.display = "block";
+
+            showStatus("Session restored!", "success");
+
+            // Auto-connect to chat
+            setTimeout(() => {
+              authenticate();
+            }, 500);
+          } catch (error) {
+            console.error("Error restoring session:", error);
+            clearSession();
+          }
+        }
+      }
+
+      function saveSession() {
+        if (authToken && currentUser) {
+          localStorage.setItem("authToken", authToken);
+          localStorage.setItem("currentUser", JSON.stringify(currentUser));
+        }
+      }
+
+      function clearSession() {
+        localStorage.removeItem("authToken");
+        localStorage.removeItem("currentUser");
+        authToken = null;
+        currentUser = null;
+      }
+
+      function toggleLoginMethod() {
+        const method = document.getElementById("loginMethod").value;
+        const phoneLogin = document.getElementById("phoneLogin");
+        const googleLogin = document.getElementById("googleLogin");
+
+        if (method === "phone") {
+          phoneLogin.style.display = "block";
+          googleLogin.style.display = "none";
+        } else {
+          phoneLogin.style.display = "none";
+          googleLogin.style.display = "block";
+        }
+      }
+
+      async function sendOtp() {
+        const phoneNumber = document.getElementById("phoneNumber").value;
+
+        if (!phoneNumber) {
+          showStatus("Please enter phone number", "error");
+          return;
+        }
+
+        try {
+          const response = await fetch("/api/auth/send-otp", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ phoneNumber, role: "instructor" }),
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            document.getElementById("otpSection").style.display = "block";
+            document.getElementById("sendOtpBtn").disabled = true;
+            showStatus("OTP sent successfully!", "success");
+
+            // Re-enable send button after 2 minutes
+            setTimeout(() => {
+              document.getElementById("sendOtpBtn").disabled = false;
+            }, 120000);
+          } else {
+            showStatus("Failed to send OTP: " + data.message, "error");
+          }
+        } catch (error) {
+          showStatus("Error sending OTP: " + error.message, "error");
+        }
+      }
+
+      async function verifyOtp() {
+        const phoneNumber = document.getElementById("phoneNumber").value;
+        const otp = document.getElementById("otp").value;
+        const role = document.getElementById("role").value;
+
+        if (!phoneNumber || !otp || !role) {
+          showStatus("Please fill all fields", "error");
+          return;
+        }
+
+        try {
+          const response = await fetch("/api/auth/verify-otp", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ phoneNumber, otp }),
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            authToken = data.data.accessToken;
+            currentUser = data.data.user;
+            document.getElementById("userId").value = data.data.user._id;
+            document.getElementById("userName").value = data.data.user.name;
+            document.getElementById("loginSection").style.display = "none";
+            document.getElementById("mainPanel").style.display = "block";
+            showStatus("Login successful!", "success");
+
+            // Save session
+            saveSession();
+
+            // Auto-connect to chat after successful login
+            setTimeout(() => {
+              authenticate();
+            }, 500);
+          } else {
+            showStatus("Login failed: " + data.message, "error");
+          }
+        } catch (error) {
+          showStatus("Login error: " + error.message, "error");
+        }
+      }
+
+      // Google Sign-In callback
+      function handleCredentialResponse(response) {
+        googleLogin(response.credential);
+      }
+
+      async function googleLogin(idToken) {
+        try {
+          const response = await fetch("/api/auth/google-login", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ idToken }),
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            authToken = data.data.accessToken;
+            currentUser = data.data.user;
+            document.getElementById("userId").value = data.data.user._id;
+            document.getElementById("userName").value = data.data.user.name;
+            document.getElementById("loginSection").style.display = "none";
+            document.getElementById("mainPanel").style.display = "block";
+            showStatus("Google login successful!", "success");
+
+            // Save session
+            saveSession();
+
+            // Auto-connect to chat after successful login
+            setTimeout(() => {
+              authenticate();
+            }, 500);
+          } else {
+            showStatus("Google login failed: " + data.message, "error");
+          }
+        } catch (error) {
+          showStatus("Google login error: " + error.message, "error");
+        }
+      }
+
+      function authenticate() {
+        const userId = document.getElementById("userId").value;
+        const userName = document.getElementById("userName").value;
+
+        if (!userId || !userName) {
+          showStatus("Please enter both User ID and Name", "error");
+          return;
+        }
+
+        // Initialize socket connection
+        socket = io();
+
+        socket.on("connect", () => {
+          console.log("Connected to server");
+          socket.emit("authenticate", {
+            userId: userId,
+            name: userName,
+          });
+          showStatus("Connected to chat server!", "success");
         });
 
-        function checkExistingSession() {
-            const savedToken = localStorage.getItem('authToken');
-            const savedUser = localStorage.getItem('currentUser');
-            
-            if (savedToken && savedUser) {
-                try {
-                    authToken = savedToken;
-                    currentUser = JSON.parse(savedUser);
-                    
-                    // Restore UI state
-                    document.getElementById('userId').value = currentUser._id;
-                    document.getElementById('userName').value = currentUser.name;
-                    document.getElementById('loginSection').style.display = 'none';
-                    document.getElementById('mainPanel').style.display = 'block';
-                    
-                    showStatus('Session restored!', 'success');
-                    
-                    // Auto-connect to chat
-                    setTimeout(() => {
-                        authenticate();
-                    }, 500);
-                } catch (error) {
-                    console.error('Error restoring session:', error);
-                    clearSession();
-                }
-            }
+        socket.on("newMessage", (message) => {
+          console.log("Received new message:", message);
+          displayMessage(message);
+        });
+
+        const typingIndicator = document.getElementById("typing-indicator");
+
+        socket.on("typingStatus", (data) => {
+          if (data.name) {
+            typingIndicator.innerHTML = data.isTyping ? `${data.name} is typing...` : '';
+          } else {
+            typingIndicator.innerHTML = '';
+          }
+        });
+
+        socket.on("userJoined", (data) => {
+          if (data.name) {
+            showStatus(`${data.name} joined the group`, "success");
+          }
+        });
+
+        socket.on("userLeft", (data) => {
+          if (data.name) {
+            showStatus(`${data.name} left the group`, "success");
+          }
+        });
+
+        socket.on("messageError", (error) => {
+          showStatus("Message error: " + error.error, "error");
+        });
+
+        socket.on("disconnect", () => {
+          showStatus("Disconnected from chat server", "error");
+        });
+
+        socket.on("reconnect", () => {
+          showStatus("Reconnected to chat server", "success");
+        });
+      }
+
+      async function loadGroups() {
+        if (!authToken) {
+          showStatus("Please login first", "error");
+          return;
         }
 
-        function saveSession() {
-            if (authToken && currentUser) {
-                localStorage.setItem('authToken', authToken);
-                localStorage.setItem('currentUser', JSON.stringify(currentUser));
-            }
+        try {
+          const response = await fetch("/api/groups/my-groups", {
+            headers: {
+              Authorization: `Bearer ${authToken}`,
+            },
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            displayGroups(data.groups);
+          } else {
+            showStatus("Failed to load groups: " + data.error, "error");
+          }
+        } catch (error) {
+          showStatus("Error loading groups: " + error.message, "error");
         }
+      }
 
-        function clearSession() {
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('currentUser');
-            authToken = null;
-            currentUser = null;
-        }
+      function displayGroups(groups) {
+        const groupsList = document.getElementById("groupsList");
+        groupsList.innerHTML = "";
 
-        function toggleLoginMethod() {
-            const method = document.getElementById('loginMethod').value;
-            const phoneLogin = document.getElementById('phoneLogin');
-            const googleLogin = document.getElementById('googleLogin');
-            
-            if (method === 'phone') {
-                phoneLogin.style.display = 'block';
-                googleLogin.style.display = 'none';
-            } else {
-                phoneLogin.style.display = 'none';
-                googleLogin.style.display = 'block';
-            }
-        }
-
-        async function sendOtp() {
-            const phoneNumber = document.getElementById('phoneNumber').value;
-            
-            if (!phoneNumber) {
-                showStatus('Please enter phone number', 'error');
-                return;
-            }
-            
-            try {
-                const response = await fetch('/api/auth/send-otp', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ phoneNumber,role:'instructor' })
-                });
-                
-                const data = await response.json();
-                
-                if (response.ok) {
-                    document.getElementById('otpSection').style.display = 'block';
-                    document.getElementById('sendOtpBtn').disabled = true;
-                    showStatus('OTP sent successfully!', 'success');
-                    
-                    // Re-enable send button after 2 minutes
-                    setTimeout(() => {
-                        document.getElementById('sendOtpBtn').disabled = false;
-                    }, 120000);
-                } else {
-                    showStatus('Failed to send OTP: ' + data.message, 'error');
-                }
-            } catch (error) {
-                showStatus('Error sending OTP: ' + error.message, 'error');
-            }
-        }
-
-        async function verifyOtp() {
-            const phoneNumber = document.getElementById('phoneNumber').value;
-            const otp = document.getElementById('otp').value;
-            const role = document.getElementById('role').value;
-            
-            if (!phoneNumber || !otp || !role) {
-                showStatus('Please fill all fields', 'error');
-                return;
-            }
-            
-            try {
-                const response = await fetch('/api/auth/verify-otp', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ phoneNumber, otp })
-                });
-                
-                const data = await response.json();
-                
-                if (response.ok) {
-                    authToken = data.data.accessToken;
-                    currentUser = data.data.user;
-                    document.getElementById('userId').value = data.data.user._id;
-                    document.getElementById('userName').value = data.data.user.name;
-                    document.getElementById('loginSection').style.display = 'none';
-                    document.getElementById('mainPanel').style.display = 'block';
-                    showStatus('Login successful!', 'success');
-                    
-                    // Save session
-                    saveSession();
-                    
-                    // Auto-connect to chat after successful login
-                    setTimeout(() => {
-                        authenticate();
-                    }, 500);
-                } else {
-                    showStatus('Login failed: ' + data.message, 'error');
-                }
-            } catch (error) {
-                showStatus('Login error: ' + error.message, 'error');
-            }
-        }
-
-        // Google Sign-In callback
-        function handleCredentialResponse(response) {
-            googleLogin(response.credential);
-        }
-
-        async function googleLogin(idToken) {
-            try {
-                const response = await fetch('/api/auth/google-login', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ idToken })
-                });
-                
-                const data = await response.json();
-                
-                if (response.ok) {
-                    authToken = data.data.accessToken;
-                    currentUser = data.data.user;
-                    document.getElementById('userId').value = data.data.user._id;
-                    document.getElementById('userName').value = data.data.user.name;
-                    document.getElementById('loginSection').style.display = 'none';
-                    document.getElementById('mainPanel').style.display = 'block';
-                    showStatus('Google login successful!', 'success');
-                    
-                    // Save session
-                    saveSession();
-                    
-                    // Auto-connect to chat after successful login
-                    setTimeout(() => {
-                        authenticate();
-                    }, 500);
-                } else {
-                    showStatus('Google login failed: ' + data.message, 'error');
-                }
-            } catch (error) {
-                showStatus('Google login error: ' + error.message, 'error');
-            }
-        }
-
-        function authenticate() {
-            const userId = document.getElementById('userId').value;
-            const userName = document.getElementById('userName').value;
-            
-            if (!userId || !userName) {
-                showStatus('Please enter both User ID and Name', 'error');
-                return;
-            }
-
-            // Initialize socket connection
-            socket = io();
-            
-            socket.on('connect', () => {
-                console.log('Connected to server');
-                socket.emit('authenticate', {
-                    userId: userId,
-                    name: userName
-                });
-                showStatus('Connected to chat server!', 'success');
-            });
-
-            socket.on('newMessage', (message) => {
-                console.log('Received new message:', message);
-                displayMessage(message);
-            });
-
-            socket.on('userJoined', (data) => {
-                if (data.name) {
-                    showStatus(`${data.name} joined the group`, 'success');
-                }
-            });
-
-            socket.on('userLeft', (data) => {
-                if (data.name) {
-                    showStatus(`${data.name} left the group`, 'success');
-                }
-            });
-
-            socket.on('messageError', (error) => {
-                showStatus('Message error: ' + error.error, 'error');
-            });
-
-            socket.on('disconnect', () => {
-                showStatus('Disconnected from chat server', 'error');
-            });
-
-            socket.on('reconnect', () => {
-                showStatus('Reconnected to chat server', 'success');
-            });
-        }
-
-        async function loadGroups() {
-            if (!authToken) {
-                showStatus('Please login first', 'error');
-                return;
-            }
-
-            try {
-                const response = await fetch('/api/groups/my-groups', {
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`
-                    }
-                });
-                
-                const data = await response.json();
-                
-                if (response.ok) {
-                    displayGroups(data);
-                } else {
-                    showStatus('Failed to load groups: ' + data.error, 'error');
-                }
-            } catch (error) {
-                showStatus('Error loading groups: ' + error.message, 'error');
-            }
-        }
-
-        function displayGroups(groups) {
-            const groupsList = document.getElementById('groupsList');
-            groupsList.innerHTML = '';
-            
-            groups.forEach(group => {
-                const groupDiv = document.createElement('div');
-                groupDiv.className = 'group-item';
-                groupDiv.innerHTML = `
+        groups.forEach((group) => {
+          const groupDiv = document.createElement("div");
+          groupDiv.className = "group-item";
+          groupDiv.innerHTML = `
                     <strong>${group.name}</strong><br>
                     <small>${group.description}</small>
                 `;
-                groupDiv.onclick = () => selectGroup(group);
-                groupsList.appendChild(groupDiv);
+          groupDiv.onclick = () => selectGroup(group);
+          groupsList.appendChild(groupDiv);
+        });
+      }
+
+      function selectGroup(group) {
+        // Remove active class from all groups
+        document.querySelectorAll(".group-item").forEach((item) => {
+          item.classList.remove("active");
+        });
+
+        // Add active class to selected group
+        event.target.classList.add("active");
+
+        currentGroup = group;
+        document.getElementById(
+          "chatTitle"
+        ).textContent = `${group.name} - Instructor Chat`;
+
+        // Join the group room
+        if (socket) {
+          socket.emit("joinGroup", group._id);
+        }
+
+        // Load messages for this group
+        loadMessages(group._id);
+      }
+
+      async function loadMessages(groupId) {
+        if (!authToken) return;
+
+        try {
+          const response = await fetch(`/api/groups/${groupId}/messages`, {
+            headers: {
+              Authorization: `Bearer ${authToken}`,
+            },
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            const messagesDiv = document.getElementById("messages");
+            messagesDiv.innerHTML = "";
+            data.data.messages.forEach((message) => {
+              displayMessage(message);
             });
+          } else {
+            showStatus("Failed to load messages: " + data.message, "error");
+          }
+        } catch (error) {
+          showStatus("Error loading messages: " + error.message, "error");
+        }
+      }
+
+      function displayMessage(message) {
+        const messagesDiv = document.getElementById("messages");
+        const messageDiv = document.createElement("div");
+        messageDiv.className = "message";
+
+        // Handle different message formats (from API vs Socket)
+        let senderId, senderName, createdAt;
+
+        if (message.senderId && typeof message.senderId === "object") {
+          // From API - populated object
+          senderId = message.senderId._id;
+          senderName = message.senderId.name;
+        } else {
+          // From Socket - direct values
+          senderId = message.senderId;
+          senderName = message.senderName;
         }
 
-        function selectGroup(group) {
-            // Remove active class from all groups
-            document.querySelectorAll('.group-item').forEach(item => {
-                item.classList.remove('active');
-            });
-            
-            // Add active class to selected group
-            event.target.classList.add('active');
-            
-            currentGroup = group;
-            document.getElementById('chatTitle').textContent = `${group.name} - Instructor Chat`;
-            
-            // Join the group room
-            if (socket) {
-                socket.emit('joinGroup', group._id);
-            }
-            
-            // Load messages for this group
-            loadMessages(group._id);
+        createdAt = message.createdAt || new Date().toISOString();
+
+        // Check if it's our own message
+        if (currentUser && senderId === currentUser._id) {
+          messageDiv.classList.add("own");
         }
 
-        async function loadMessages(groupId) {
-            if (!authToken) return;
-
-            try {
-                const response = await fetch(`/api/groups/${groupId}/messages`, {
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`
-                    }
-                });
-                
-                const data = await response.json();
-                
-                if (response.ok) {
-                    const messagesDiv = document.getElementById('messages');
-                    messagesDiv.innerHTML = '';
-                    data.data.messages.forEach(message => {
-                        displayMessage(message);
-                    });
-                } else {
-                    showStatus('Failed to load messages: ' + data.message, 'error');
-                }
-            } catch (error) {
-                showStatus('Error loading messages: ' + error.message, 'error');
-            }
+        // Check if it's a system message
+        if (message.isSystemMessage) {
+          messageDiv.classList.add("system");
         }
 
-        function displayMessage(message) {
-            const messagesDiv = document.getElementById('messages');
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'message';
-            
-            // Handle different message formats (from API vs Socket)
-            let senderId, senderName, createdAt;
-            
-            if (message.senderId && typeof message.senderId === 'object') {
-                // From API - populated object
-                senderId = message.senderId._id;
-                senderName = message.senderId.name;
-            } else {
-                // From Socket - direct values
-                senderId = message.senderId;
-                senderName = message.senderName;
-            }
-            
-            createdAt = message.createdAt || new Date().toISOString();
-            
-            // Check if it's our own message
-            if (currentUser && senderId === currentUser._id) {
-                messageDiv.classList.add('own');
-            }
-            
-            const time = new Date(createdAt).toLocaleTimeString();
-            messageDiv.innerHTML = `
+        const time = new Date(createdAt).toLocaleTimeString();
+        messageDiv.innerHTML = `
                 <div class="message-header">
-                    ${senderName}
                     <span class="message-time">${time}</span>
-                    ${message.isEdited ? '<span style="color: #666;">(edited)</span>' : ''}
+                    ${
+                      message.isEdited
+                        ? '<span style="color: #666;">(edited)</span>'
+                        : ""
+                    }
                 </div>
                 <div>${message.content}</div>
             `;
-            
-            messagesDiv.appendChild(messageDiv);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+        messagesDiv.appendChild(messageDiv);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      }
+
+      function sendMessage() {
+        const messageInput = document.getElementById("messageInput");
+        const content = messageInput.value.trim();
+
+        if (!content || !currentGroup) {
+          showStatus("Please select a group and enter a message", "error");
+          return;
         }
 
-        function sendMessage() {
-            const messageInput = document.getElementById('messageInput');
-            const content = messageInput.value.trim();
-            
-            if (!content || !currentGroup) {
-                showStatus('Please select a group and enter a message', 'error');
-                return;
-            }
-
-            if (!socket || !socket.connected) {
-                showStatus('Not connected to chat server', 'error');
-                return;
-            }
-
-            const messageData = {
-                groupId: currentGroup._id,
-                senderId: currentUser._id,
-                senderName: currentUser.name,
-                content: content,
-                messageType: 'text'
-            };
-
-            console.log('Sending message:', messageData);
-            socket.emit('sendMessage', messageData);
-            messageInput.value = '';
+        if (!socket || !socket.connected) {
+          showStatus("Not connected to chat server", "error");
+          return;
         }
 
-        async function loadStudentList() {
-            if (!authToken) {
-                showStatus('Please login first', 'error');
-                return;
-            }
+        const messageData = {
+          groupId: currentGroup._id,
+          senderId: currentUser._id,
+          senderName: currentUser.name,
+          content: content,
+          messageType: "text",
+        };
 
-            try {
-                const response = await fetch('/api/user/getUserByRole/student', {
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`
-                    }
-                });
-                
-                const data = await response.json();
-                
-                if (response.ok) {
-                    displayStudentList(data.users || data.data || data);
-                    document.getElementById('studentsList').style.display = 'block';
-                } else {
-                    showStatus('Failed to load students: ' + data.message, 'error');
-                }
-            } catch (error) {
-                showStatus('Error loading students: ' + error.message, 'error');
-            }
+        console.log("Sending message:", messageData);
+        socket.emit("sendMessage", messageData);
+        messageInput.value = "";
+      }
+
+      async function loadStudentList() {
+        if (!authToken) {
+          showStatus("Please login first", "error");
+          return;
         }
 
-        function displayStudentList(students) {
-            const container = document.getElementById('studentsContainer');
-            container.innerHTML = '';
-            
-            console.log('Students data received:', students);
-            
-            if (!students) {
-                container.innerHTML = '<p>No students data received</p>';
-                return;
-            }
-            
-            // Ensure students is an array
-            if (!Array.isArray(students)) {
-                console.error('Students data is not an array:', students);
-                container.innerHTML = '<p>Invalid students data format</p>';
-                return;
-            }
-            
-            if (students.length === 0) {
-                container.innerHTML = '<p>No students found</p>';
-                return;
-            }
+        try {
+          const response = await fetch("/api/user/getUserByRole/student", {
+            headers: {
+              Authorization: `Bearer ${authToken}`,
+            },
+          });
 
-            // Filter out students already in the current group
-            const availableStudents = students.filter(student => {
-                if (!currentGroup || !currentGroup.students) return true;
-                return !currentGroup.students.some(groupStudent => 
-                    groupStudent._id === student._id || groupStudent === student._id
-                );
-            });
+          const data = await response.json();
 
-            if (availableStudents.length === 0) {
-                container.innerHTML = '<p>All students are already in this group</p>';
-                return;
-            }
-            
-            availableStudents.forEach(student => {
-                const studentDiv = document.createElement('div');
-                studentDiv.className = 'student-item';
-                studentDiv.innerHTML = `
+          if (response.ok) {
+            displayStudentList(data.users || data.data || data);
+            document.getElementById("studentsList").style.display = "block";
+          } else {
+            showStatus("Failed to load students: " + data.message, "error");
+          }
+        } catch (error) {
+          showStatus("Error loading students: " + error.message, "error");
+        }
+      }
+
+      function displayStudentList(students) {
+        const container = document.getElementById("studentsContainer");
+        container.innerHTML = "";
+
+        console.log("Students data received:", students);
+
+        if (!students) {
+          container.innerHTML = "<p>No students data received</p>";
+          return;
+        }
+
+        // Ensure students is an array
+        if (!Array.isArray(students)) {
+          console.error("Students data is not an array:", students);
+          container.innerHTML = "<p>Invalid students data format</p>";
+          return;
+        }
+
+        if (students.length === 0) {
+          container.innerHTML = "<p>No students found</p>";
+          return;
+        }
+
+        // Filter out students already in the current group
+        const availableStudents = students.filter((student) => {
+          if (!currentGroup || !currentGroup.students) return true;
+          return !currentGroup.students.some(
+            (groupStudent) =>
+              groupStudent._id === student._id || groupStudent === student._id
+          );
+        });
+
+        if (availableStudents.length === 0) {
+          container.innerHTML = "<p>All students are already in this group</p>";
+          return;
+        }
+
+        availableStudents.forEach((student) => {
+          const studentDiv = document.createElement("div");
+          studentDiv.className = "student-item";
+          studentDiv.innerHTML = `
                     <div class="student-info">
                         <strong>${student.name}</strong><br>
-                        <small>${student.email || student.phoneNumber || 'No contact info'}</small>
+                        <small>${
+                          student.email ||
+                          student.phoneNumber ||
+                          "No contact info"
+                        }</small>
                     </div>
-                    <button class="add-student-btn" onclick="addStudentToGroup('${student._id}', '${student.name}', this)">
+                    <button class="add-student-btn" onclick="addStudentToGroup('${
+                      student._id
+                    }', '${student.name}', this)">
                         + Add
                     </button>
                 `;
-                container.appendChild(studentDiv);
+          container.appendChild(studentDiv);
+        });
+      }
+
+      async function addStudentToGroup(studentId, studentName, buttonElement) {
+        if (!currentGroup || !authToken) {
+          showStatus("Please select a group first", "error");
+          return;
+        }
+
+        // Disable button to prevent double-clicking
+        buttonElement.disabled = true;
+        buttonElement.textContent = "Adding...";
+
+        try {
+          const response = await fetch(
+            `/api/groups/${currentGroup._id}/students`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${authToken}`,
+              },
+              body: JSON.stringify({ studentId: studentId }),
+            }
+          );
+
+          const data = await response.json();
+
+          if (response.ok) {
+            showStatus(
+              `${studentName} added to group successfully!`,
+              "success"
+            );
+            // Remove the student from the list
+            buttonElement.parentElement.remove();
+
+            // Update current group data to reflect the addition
+            if (!currentGroup.students) currentGroup.students = [];
+            currentGroup.students.push(studentId);
+          } else {
+            if (data.error && data.error.includes("already")) {
+              alert(`${studentName} is already in this group!`);
+              buttonElement.parentElement.remove();
+            } else {
+              showStatus("Failed to add student: " + data.error, "error");
+              buttonElement.disabled = false;
+              buttonElement.textContent = "+ Add";
+            }
+          }
+        } catch (error) {
+          showStatus("Error adding student: " + error.message, "error");
+          buttonElement.disabled = false;
+          buttonElement.textContent = "+ Add";
+        }
+      }
+
+      let typingTimeout;
+
+      function handleKeyPress(event) {
+        if (currentGroup && socket) {
+          socket.emit("typing", {
+            groupId: currentGroup._id,
+            isTyping: true,
+            name: currentUser.name,
+            userId: currentUser._id,
+          });
+
+          // Clear previous timeout
+          clearTimeout(typingTimeout);
+
+          // Set a timeout to stop typing after 2 seconds of inactivity
+          typingTimeout = setTimeout(() => {
+            socket.emit("typing", {
+              groupId: currentGroup._id,
+              isTyping: false,
+              name: currentUser.name,
+              userId: currentUser._id,
             });
+          }, 2000);
         }
 
-        async function addStudentToGroup(studentId, studentName, buttonElement) {
-            if (!currentGroup || !authToken) {
-                showStatus('Please select a group first', 'error');
-                return;
-            }
+        if (event.key === "Enter") {
+          sendMessage();
 
-            // Disable button to prevent double-clicking
-            buttonElement.disabled = true;
-            buttonElement.textContent = 'Adding...';
-
-            try {
-                const response = await fetch(`/api/groups/${currentGroup._id}/students`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${authToken}`
-                    },
-                    body: JSON.stringify({ studentId: studentId })
-                });
-                
-                const data = await response.json();
-                
-                if (response.ok) {
-                    showStatus(`${studentName} added to group successfully!`, 'success');
-                    // Remove the student from the list
-                    buttonElement.parentElement.remove();
-                    
-                    // Update current group data to reflect the addition
-                    if (!currentGroup.students) currentGroup.students = [];
-                    currentGroup.students.push(studentId);
-                } else {
-                    if (data.error && data.error.includes('already')) {
-                        alert(`${studentName} is already in this group!`);
-                        buttonElement.parentElement.remove();
-                    } else {
-                        showStatus('Failed to add student: ' + data.error, 'error');
-                        buttonElement.disabled = false;
-                        buttonElement.textContent = '+ Add';
-                    }
-                }
-            } catch (error) {
-                showStatus('Error adding student: ' + error.message, 'error');
-                buttonElement.disabled = false;
-                buttonElement.textContent = '+ Add';
-            }
+          // Stop typing immediately on Enter
+          socket.emit("typing", {
+            groupId: currentGroup._id,
+            isTyping: false,
+            name: currentUser.name,
+            userId: currentUser._id,
+          });
         }
+      }
 
-        function handleKeyPress(event) {
-            if (event.key === 'Enter') {
-                sendMessage();
-            }
-        }
-
-        function showStatus(message, type) {
-            const statusDiv = document.getElementById('status');
-            statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
-            setTimeout(() => {
-                statusDiv.innerHTML = '';
-            }, 5000);
-        }
+      function showStatus(message, type) {
+        const statusDiv = document.getElementById("status");
+        statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+        setTimeout(() => {
+          statusDiv.innerHTML = "";
+        }, 5000);
+      }
     </script>
-</body>
+  </body>
 </html>
