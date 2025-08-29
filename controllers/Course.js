@@ -410,6 +410,7 @@ const getCourseBySlug = async (req, res) => {
  */
 const getAllCourses = async (req, res) => {
   try {
+    console.log(req.query);
     let query = { published: true };
     
     // Apply filters from req.query
@@ -426,14 +427,11 @@ const getAllCourses = async (req, res) => {
     if (req.query.published !== undefined) {
       query.published = req.query.published === 'true';
     }
-    
-    if (req.query.instructor && req.user.role === 'instructor') {
-      query.instructor = req.user.id;
-    }
-    else if (req.query.instructor) {
+     
+    if (req.query.instructor) {
       query.instructor = req.query.instructor;
     }
-    
+
     // Apply search filter
     if (req.query.search && req.query.search.trim() !== '') {
       const searchRegex = new RegExp(req.query.search, 'i');

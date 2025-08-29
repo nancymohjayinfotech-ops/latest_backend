@@ -31,7 +31,6 @@ const getInstructorStats = async (req, res) => {
         ratingCount += course.ratings.length;
       }
     });
-    
     const averageRating = ratingCount > 0 ? (totalRatings / ratingCount).toFixed(1) : 0;
     
     // Get course count by status
@@ -689,6 +688,75 @@ const getNotificationPreferences = async (req, res) => {
   }
 };
 
+const deleteInstructorSlot = async (req, res) => {
+  try {
+    const instructorId = req.user.id;
+    const { slotId } = req.params;
+
+    if (req.user.role !== 'instructor') {
+      return res.status(403).json({
+        success: false,
+        message: 'Only instructors can delete availability slots'
+      });
+    }
+
+    // Find the instructor
+    const instructor = await User.findById(instructorId);
+    if (!instructor) {
+      return res.status(404).json({
+        success: false,
+        message: 'Instructor not found'
+      });
+    }
+
+    // Check if instructor has availability slots
+    if (!instructor.availabilitySlots || instructor.availabilitySlots.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'No availability slots found'
+      });
+    }
+
+    // Find the slot index by its ID
+    const slotIndex = instructor.availabilitySlots.findIndex(
+      slot => slot._id.toString() === slotId
+    );
+
+    if (slotIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: 'Slot not found'
+      });
+    }
+
+    // Remove the slot from the array
+    instructor.availabilitySlots.splice(slotIndex, 1);
+
+    // Save the updated instructor
+    await instructor.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Availability slot deleted successfully',
+      data: {
+        instructor: {
+          name: instructor.name,
+          email: instructor.email,
+          availabilitySlots: instructor.availabilitySlots
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Error deleting instructor slot:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error deleting availability slot',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   getInstructorStats,
   getInstructorReviews,
@@ -700,5 +768,6 @@ module.exports = {
   updateInstructorSlots,
   updateNotificationPreferences,
   getInstructorSlots,
-  getNotificationPreferences
+  getNotificationPreferences,
+  deleteInstructorSlot
 };

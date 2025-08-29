@@ -16,7 +16,8 @@ router.use(protect, authorize('instructor'));
  * @access  Private (Instructor only)
  */
 router.get('/courses', (req, res) => {
-  courseController.getAllCourses(req, res);
+  const instructorId = req.user.id;
+  courseController.getAllCourses({ ...req, query: { ...req.query, instructor: instructorId } }, res);
 });
 
 /**
@@ -53,6 +54,13 @@ router.put('/slots', instructorController.updateInstructorSlots);
  * @access  Private (Instructor only)
  */
 router.get('/slots', instructorController.getInstructorSlots);
+
+/**
+ * @route   DELETE /api/instructor/slots/:slotId
+ * @desc    Delete a specific instructor availability slot
+ * @access  Private (Instructor only)
+ */
+router.delete('/slots/:slotId', instructorController.deleteInstructorSlot);
 
 /**
  * @route   PUT /api/instructor/notifications
