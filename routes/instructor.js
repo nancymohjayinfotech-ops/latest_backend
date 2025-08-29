@@ -125,4 +125,18 @@ router.get('/groups', groupController.getGroupsForUser);
  */
 router.get('/groups/:groupId', groupController.getGroupWithMessages);
 
+/**
+ * @route   GET /api/instructor/quizzes
+ * @desc    Get all quizzes created by the instructor with pagination
+ * @access  Private (Instructor only)
+ */
+router.get('/quizzes', instructorController.getInstructorQuizzes);
+
+/**
+ * @route   GET /api/instructor/assessments
+ * @desc    Get all assessments created by the instructor with pagination
+ * @access  Private (Instructor only)
+ */
+router.get('/assessments', instructorController.getInstructorAssessments);
+
 module.exports = router;

@@ -1,5 +1,7 @@
 const Course = require('../models/Course');
 const User = require('../models/User');
+const Quiz = require('../models/Quiz');
+const Assessment = require('../models/Assessment');
 const getInstructorStats = async (req, res) => {
   try {
     const instructorId = req.user.id;
@@ -757,6 +759,76 @@ const deleteInstructorSlot = async (req, res) => {
   }
 };
 
+const getInstructorQuizzes = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    // Get quizzes created by the instructor
+    const quizzes = await Quiz.find({ createdBy: req.user.id })
+      .populate('course', 'title slug')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .select('title timeLimit active createdAt course');
+
+    // Get total count for pagination
+    const totalQuizzes = await Quiz.countDocuments({ createdBy: req.user.id });
+
+    res.status(200).json({
+      success: true,
+      quizzes,
+      count: quizzes.length,
+      totalPages: Math.ceil(totalQuizzes / limit),
+      currentPage: page,
+      
+    });
+  } catch (error) {
+    console.error('Error fetching instructor quizzes:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch instructor quizzes',
+      error: error.message
+    });
+  }
+};
+
+const getInstructorAssessments = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    // Get assessments created by the instructor
+    const assessments = await Assessment.find({ createdBy: req.user.id })
+      .populate('course', 'title slug')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .select('title description dueDate totalPoints active createdAt course');
+
+    // Get total count for pagination
+    const totalAssessments = await Assessment.countDocuments({ createdBy: req.user.id });
+
+    res.status(200).json({
+      success: true,
+      assessments,
+      count: assessments.length,
+      totalPages: Math.ceil(totalAssessments / limit),
+      currentPage: page,
+      
+    });
+  } catch (error) {
+    console.error('Error fetching instructor assessments:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch instructor assessments',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   getInstructorStats,
   getInstructorReviews,
@@ -769,5 +841,7 @@ module.exports = {
   updateNotificationPreferences,
   getInstructorSlots,
   getNotificationPreferences,
-  deleteInstructorSlot
+  deleteInstructorSlot,
+  getInstructorQuizzes,
+  getInstructorAssessments
 };
