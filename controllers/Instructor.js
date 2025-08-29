@@ -771,7 +771,7 @@ const getInstructorQuizzes = async (req, res) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .select('title timeLimit active createdAt course');
+      .select('title questions timeLimit active createdAt course');
 
     // Get total count for pagination
     const totalQuizzes = await Quiz.countDocuments({ createdBy: req.user.id });
