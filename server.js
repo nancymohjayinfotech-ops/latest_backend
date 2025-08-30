@@ -69,10 +69,10 @@ app.use('/api/admin/events', adminEventRoutes);
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
-// app.get('/seed',(req,res)=>{
-//   seedData();
-//   return res.status(200).json({"status":'done'});
-// })
+app.get('/seed',(req,res)=>{
+  seedData();
+  return res.status(200).json({"status":'done'});
+})
 app.get('/test/chat', (req, res) => {
   res.render('chat-test');
 });
