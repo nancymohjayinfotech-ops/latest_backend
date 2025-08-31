@@ -31,7 +31,7 @@ const validatePhoneNumber = (phone) => {
   // Convert to string if it's not already
   const phoneStr = String(phone || '');
   // Basic phone validation - adjust regex based on your requirements
-  const phoneRegex = /^[+]?[1-9]\d{1,14}$/;
+  const phoneRegex = /^[1-9]\d{1,14}$/;
   return phoneRegex.test(phoneStr.replace(/[\s-()]/g, ''));
 };
 
