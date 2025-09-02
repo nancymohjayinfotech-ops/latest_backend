@@ -1,14 +1,6 @@
 const User = require('../models/User');
 const Course = require('../models/Course');
-const Category = require('../models/Category');
-const Subcategory = require('../models/Subcategory');
-const AssessmentResult = require('../models/AssessmentResult');
 
-/**
- * Get enrolled courses with progress for the current student
- * @route GET /api/student/enrolled-courses
- * @access Private (Student only)
- */
 const getEnrolledCoursesWithProgress = async (req, res) => {
   try {
     // Extract pagination parameters from query
@@ -130,12 +122,6 @@ const getEnrolledCoursesWithProgress = async (req, res) => {
     });
   }
 };
-
-/**
- * Get detailed progress for a specific course
- * @route GET /api/student/courses/:courseId/progress
- * @access Private (Student only)
- */
 const getCourseProgress = async (req, res) => {
   try {
     const { courseId } = req.params;
@@ -251,11 +237,129 @@ const getCourseProgress = async (req, res) => {
   }
 };
 
-/**
- * Get student dashboard statistics
- * @route GET /api/student/dashboard/stats
- * @access Private (Student only)
- */
+const updateCourseProgress = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const { 
+      videoId, 
+      sectionId, 
+      timeSpent = 0, 
+      markVideoComplete = false,
+      markSectionComplete = false 
+    } = req.body;
+
+    // Validate required fields
+    if (!videoId && !sectionId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Either videoId or sectionId is required'
+      });
+    }
+
+    // Find the user
+    const user = await User.findById(req.user.id);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Find the enrollment for the specified course
+    const enrollmentIndex = user.enrolledCourses.findIndex(
+      enrollment => enrollment.course.toString() === courseId.toString()
+    );
+
+    if (enrollmentIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: 'You are not enrolled in this course'
+      });
+    }
+
+    // Initialize progress if it doesn't exist
+    if (!user.enrolledCourses[enrollmentIndex].progress) {
+      user.enrolledCourses[enrollmentIndex].progress = {
+        completedSections: [],
+        completedVideos: [],
+        totalTimeSpent: 0
+      };
+    }
+
+    const progress = user.enrolledCourses[enrollmentIndex].progress;
+
+    // Update video progress
+    if (videoId && markVideoComplete) {
+      // Add video to completed list if not already there
+      if (!progress.completedVideos.includes(videoId)) {
+        progress.completedVideos.push(videoId);
+      }
+    }
+
+    // Update section progress
+    if (sectionId && markSectionComplete) {
+      // Add section to completed list if not already there
+      if (!progress.completedSections.includes(sectionId)) {
+        progress.completedSections.push(sectionId);
+      }
+    }
+
+    // Update total time spent
+    if (timeSpent > 0) {
+      progress.totalTimeSpent += timeSpent;
+    }
+
+    // Update last accessed time
+    user.enrolledCourses[enrollmentIndex].lastAccessed = new Date();
+
+    // Save the user
+    await user.save();
+
+    // Get updated course details for response
+    const course = await Course.findById(courseId)
+      .select('title sections videos');
+
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: 'Course not found'
+      });
+    }
+
+    // Calculate updated progress
+    const totalVideos = course.videos ? course.videos.length : 0;
+    const completedVideos = progress.completedVideos.length;
+    const percentage = totalVideos > 0 
+      ? Math.round((completedVideos / totalVideos) * 100) 
+      : 0;
+
+    return res.status(200).json({
+      success: true,
+      message: 'Course progress updated successfully',
+      data: {
+        courseId,
+        progress: {
+          percentage,
+          completedSections: progress.completedSections.length,
+          totalSections: course.sections ? course.sections.length : 0,
+          completedVideos,
+          totalVideos,
+          totalTimeSpent: progress.totalTimeSpent,
+          lastAccessed: user.enrolledCourses[enrollmentIndex].lastAccessed
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error updating course progress:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+};
+
 const getDashboardStats = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -346,5 +450,6 @@ const getDashboardStats = async (req, res) => {
 module.exports = {
   getEnrolledCoursesWithProgress,
   getCourseProgress,
+  updateCourseProgress,
   getDashboardStats,
 };

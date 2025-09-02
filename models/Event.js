@@ -50,7 +50,7 @@ const eventSchema = new mongoose.Schema({
     },
     eventType: {
         type: String,
-        enum: ['online', 'offline'],
+        enum: ['online', 'offline','hybrid'],
         default: 'offline'
     },
     startDate: {

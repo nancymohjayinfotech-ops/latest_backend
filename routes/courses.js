@@ -18,6 +18,7 @@ const {
 const { 
   getEnrolledCoursesWithProgress,
   getCourseProgress,
+  updateCourseProgress,
   getDashboardStats
 } = require('../controllers/StudentDashboard');
 
@@ -70,6 +71,7 @@ router.route('/student/enrolled')
   .get(protect, authorize('student'), getEnrolledCoursesWithProgress);
 
 router.route('/student/:courseId/progress')
-  .get(protect, authorize('student'), getCourseProgress);
+  .get(protect, authorize('student'), getCourseProgress)
+  .put(protect, authorize('student'), updateCourseProgress);
 
 module.exports = router;
