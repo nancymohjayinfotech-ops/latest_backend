@@ -68,12 +68,12 @@ exports.sendOtp = async (req, res) => {
     const cleanPhone = String(phoneNumber || '').replace(/[\s-()]/g, '');
 
     // Find or create user
-    let user = await User.findOne({ phoneNumber: cleanPhone,role:role });
+    let user = await User.findOne({ phoneNumber: cleanPhone });
 
     if (user && user.role !== role) {
       return res.status(400).json({
         success: false,
-        message: `Phone number already registered as ${user.role}`
+        message: `Phone number already registered`
       });
     }
     

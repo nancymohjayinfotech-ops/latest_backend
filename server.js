@@ -13,7 +13,7 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server,{
   cors: {
-    origin: ["http://localhost:4200","*"], // Your Angular app URL
+    origin: ["http://localhost:4200"], // Your Angular app URL
     methods: ["GET", "POST"],
     credentials: true
   }
