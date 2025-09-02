@@ -649,7 +649,7 @@ const getEventEnrollments = async (req, res) => {
         const { status } = req.query;
 
         const event = await Event.findOne({ _id: eventId, isActive: true })
-            .populate('enrollments.student', 'name email phone');
+            .populate('enrollments.student', 'name email phoneNumber college');
 
         if (!event) {
             return res.status(404).json({
@@ -670,7 +670,10 @@ const getEventEnrollments = async (req, res) => {
                 event: {
                     _id: event._id,
                     title: event.title,
-                    maxParticipants: event.maxParticipants
+                    maxParticipants: event.maxParticipants,
+                    category: event.category,
+                    location: event.location,  
+                    type: event.eventType
                 },
                 enrollments: enrollments,
                 stats: {

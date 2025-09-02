@@ -12,7 +12,8 @@ const {
     getStudentEnrollments,
     manageEnrollment,
     getEventEnrollments,
-    getEventDashboard
+    getEventDashboard,
+    deleteEvent
 } = require('../controllers/Event');
 
 // Set uploadType for event images
@@ -38,6 +39,7 @@ router.post('/', protect, authorize('event'), setEventUploadType, uploadMultiple
 router.get('/', protect, authorize('event'), getAllEvents);
 router.get('/:id', protect, authorize('event'), getEventById);
 router.put('/:id', protect, authorize('event'), setEventUploadType, uploadMultiple('images', 10), editEvent);
+router.delete('/:id', protect, authorize('event'), deleteEvent);
 router.get('/:eventId/enrollments', protect, authorize('event'), getEventEnrollments);
 router.patch('/:eventId/enrollments/:enrollmentId', protect, authorize('event'), manageEnrollment);
 

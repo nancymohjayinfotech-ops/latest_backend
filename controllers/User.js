@@ -530,6 +530,273 @@ const checkInterestsStatus = async (req, res) => {
   }
 };
 
+// Create new user (Admin only)
+const createUser = async (req, res) => {
+  try {
+    const { name, email, phoneNumber, password, role, college, state, city, dob, bio, address } = req.body;
+    
+    // Validate required fields
+    if (!name) {
+      return res.status(400).json({
+        success: false,
+        message: 'Name is required'
+      });
+    }
+    
+    if (!role || !['admin', 'instructor', 'student', 'event'].includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Valid role is required (admin, instructor, student, event)'
+      });
+    }
+    
+    // Check if user with email or phone already exists
+    if (email) {
+      const existingUserByEmail = await User.findOne({ email });
+      if (existingUserByEmail) {
+        return res.status(400).json({
+          success: false,
+          message: 'User with this email already exists'
+        });
+      }
+    }
+    
+    if (phoneNumber) {
+      const existingUserByPhone = await User.findOne({ phoneNumber });
+      if (existingUserByPhone) {
+        return res.status(400).json({
+          success: false,
+          message: 'User with this phone number already exists'
+        });
+      }
+    }
+    
+    // Create user data object
+    const userData = {
+      name,
+      role,
+      email: email || '',
+      phoneNumber: phoneNumber || '',
+      password: password || '',
+      bio: bio || '',
+      dob: dob || '',
+      state: state || '',
+      city: city || '',
+      college: college || '',
+      address: address || '',
+      isActive: true
+    };
+    
+    // Generate student ID if role is student and college is provided
+    if (role === 'student' && college) {
+      userData.studentId = await generateStudentId(college);
+    }
+    
+    // Create the user
+    const user = new User(userData);
+    await user.save();
+    
+    // Return user without sensitive information
+    const userResponse = await User.findById(user._id).select('-password -otpHash -sessionToken -refreshToken');
+    
+    return res.status(201).json({
+      success: true,
+      message: 'User created successfully',
+      user: userResponse
+    });
+  } catch (error) {
+    console.error('Error creating user:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+};
+
+// Get all users (Admin only)
+const getAllUsers = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const role = req.query.role;
+    const isActive = req.query.isActive;
+    const search = req.query.search;
+    
+    // Calculate skip value for pagination
+    const skip = (page - 1) * limit;
+    
+    // Build filter object
+    const filter = {};
+    if (role) filter.role = role;
+    if (isActive !== undefined) filter.isActive = isActive === 'true';
+    
+    // Add search functionality
+    if (search) {
+      filter.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { phoneNumber: { $regex: search, $options: 'i' } },
+        { studentId: { $regex: search, $options: 'i' } },
+        { college: { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    // Get total count for pagination metadata
+    const totalCount = await User.countDocuments(filter);
+    
+    // Calculate pagination metadata
+    const totalPages = Math.ceil(totalCount / limit);
+    const hasNextPage = page < totalPages;
+    const hasPrevPage = page > 1;
+    
+    // Get users with selected fields (excluding sensitive data)
+    const users = await User.find(filter)
+      .select('-password -otpHash -sessionToken -refreshToken -otpExpiry -otpAttempts -otpAttemptsExpiry -refreshTokenExpiry')
+      .skip(skip)
+      .limit(limit)
+      .sort({ createdAt: -1 });
+    
+    return res.status(200).json({
+      success: true,
+      users,
+      pagination: {
+        totalCount,
+        totalPages,
+        currentPage: page,
+        pageSize: limit,
+        hasNextPage,
+        hasPrevPage
+      }
+    });
+  } catch (error) {
+    console.error('Error getting all users:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+};
+
+
+
+const getUserById = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    const user = await User.findById(userId).select('-password -otpHash -sessionToken -refreshToken');
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+    
+    return res.status(200).json({
+      success: true,
+      user
+    });
+  } catch (error) {
+    console.error('Error getting user by ID:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+};
+
+// Update user (Admin only)
+const updateUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { name, email, phoneNumber, role, college, state, city, dob, bio, address, isActive } = req.body;
+    
+    // Check if user exists
+    const existingUser = await User.findById(userId);
+    if (!existingUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+    
+    // Validate role if provided
+    if (role && !['admin', 'instructor', 'student', 'event'].includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Valid role is required (admin, instructor, student, event)'
+      });
+    }
+    
+    // Check for duplicate email or phone (excluding current user)
+    if (email && email !== existingUser.email) {
+      const duplicateEmail = await User.findOne({ email, _id: { $ne: userId } });
+      if (duplicateEmail) {
+        return res.status(400).json({
+          success: false,
+          message: 'User with this email already exists'
+        });
+      }
+    }
+    
+    if (phoneNumber && phoneNumber !== existingUser.phoneNumber) {
+      const duplicatePhone = await User.findOne({ phoneNumber, _id: { $ne: userId } });
+      if (duplicatePhone) {
+        return res.status(400).json({
+          success: false,
+          message: 'User with this phone number already exists'
+        });
+      }
+    }
+    
+    // Prepare update data
+    const updateData = {
+      updatedAt: new Date()
+    };
+    
+    // Only update fields that are provided
+    if (name !== undefined) updateData.name = name;
+    if (email !== undefined) updateData.email = email;
+    if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
+    if (role !== undefined) updateData.role = role;
+    if (college !== undefined) updateData.college = college;
+    if (state !== undefined) updateData.state = state;
+    if (city !== undefined) updateData.city = city;
+    if (dob !== undefined) updateData.dob = dob;
+    if (bio !== undefined) updateData.bio = bio;
+    if (address !== undefined) updateData.address = address;
+    if (isActive !== undefined) updateData.isActive = isActive;
+    
+    // Generate new student ID if role changed to student and college is provided
+    if (role === 'student' && college && existingUser.role !== 'student') {
+      updateData.studentId = await generateStudentId(college);
+    }
+    
+    // Update the user
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      updateData,
+      { new: true, runValidators: true }
+    ).select('-password -otpHash -sessionToken -refreshToken');
+    
+    return res.status(200).json({
+      success: true,
+      message: 'User updated successfully',
+      user: updatedUser
+    });
+  } catch (error) {
+    console.error('Error updating user:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   getProfile,
   updateProfile,
@@ -545,5 +812,9 @@ module.exports = {
   setUserInterests,
   getUserInterests,
   checkInterestsStatus,
-  getUserByRolePaginated
+  getUserByRolePaginated,
+  createUser,
+  getAllUsers,
+  getUserById,
+  updateUser
 };

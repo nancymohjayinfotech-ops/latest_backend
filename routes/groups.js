@@ -25,7 +25,7 @@ router.delete('/:groupId/students/:studentId', protect,authorize('admin','instru
 router.post('/:groupId/leave', protect,authorize('student'), groupController.leaveGroup);
 
 // Message routes
-router.post('/:groupId/messages', protect, authorize('admin','student','instructor'), (req, res) => {
+router.post('/:groupId/messages', protect, authorize('admin','instructor'), (req, res) => {
   // Add groupId from URL params to request body
   req.body.groupId = req.params.groupId;
   messageController.createMessage(req, res);
