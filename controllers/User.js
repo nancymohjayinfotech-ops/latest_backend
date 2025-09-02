@@ -45,6 +45,45 @@ const getUserByRole = async (req, res) => {
   }
 };
 
+const getUserByRolePaginated = async (req, res) => {
+  try {
+     const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        
+        // Calculate skip value for pagination
+        const skip = (page - 1) * limit;
+        
+        // Get total count for pagination metadata
+        const totalCount = await User.countDocuments({ role: req.params.role });
+        
+        // Calculate pagination metadata
+        const totalPages = Math.ceil(totalCount / limit);
+        const hasNextPage = page < totalPages;
+        const hasPrevPage = page > 1;
+        
+    const users = await User.find({ role: req.params.role }).skip(skip).limit(limit);
+    return res.status(200).json({
+      success: true,
+      users,
+      pagination: {
+        totalCount,
+        totalPages,
+        currentPage: page,
+        pageSize: limit,
+        hasNextPage,
+        hasPrevPage
+      }
+    });
+  } catch (error) {
+    console.error('Error getting users by role:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+};
+
 // Helper function to generate a unique student ID based on college name and random number
 const generateStudentId = async (collegeName) => {
   try {
@@ -505,5 +544,6 @@ module.exports = {
   getUserByRole,
   setUserInterests,
   getUserInterests,
-  checkInterestsStatus
+  checkInterestsStatus,
+  getUserByRolePaginated
 };

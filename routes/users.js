@@ -12,6 +12,7 @@ const {
   getCart,
   clearCart,
   getUserByRole,
+  getUserByRolePaginated,
   setUserInterests,
   getUserInterests,
   checkInterestsStatus
@@ -24,6 +25,7 @@ router.put('/profile', protect, updateProfile);
 router.post('/set-college', protect, setCollege); // New endpoint for setting college after Google sign-in
 
 router.get('/getUserByRole/:role', protect, authorize('admin','instructor'), getUserByRole);
+router.get('/getUserByRole/:role/paginated', protect, authorize('admin'), getUserByRolePaginated);
 
 // Favorite courses routes
 router.get('/favorites', protect, getFavoriteCourses);
