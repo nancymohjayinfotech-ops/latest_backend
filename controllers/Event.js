@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const Group = require('../models/Group');
 const Message = require('../models/Message');
+const User = require('../models/User');
 
 // Create Event (User/Admin)
 const createEvent = async (req, res) => {
