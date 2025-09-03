@@ -10,10 +10,10 @@ router.get('/', protect,authorize('admin','instructor'), groupController.getAllG
 
 // Get groups for current user
 router.get('/my-groups', protect,authorize('student','instructor','event'), groupController.getGroupsForUser);
+router.get('/:groupId/with-messages', protect,authorize('admin','student','instructor','event'), groupController.getGroupWithMessages);
 
 router.get('/:groupId', protect,authorize('admin','student','instructor','event'), groupController.getGroupById);
 router.get('/:groupId/members', protect,authorize('admin','student','instructor','event'), groupController.getGroupMembers);
-router.get('/:groupId/with-messages', protect,authorize('admin','student','instructor','event'), groupController.getGroupWithMessages);
 
 // Instructor management routes
 router.post('/:groupId/instructors', protect,authorize('admin'), groupController.addInstructor);

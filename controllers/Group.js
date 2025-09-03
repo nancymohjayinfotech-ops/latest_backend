@@ -467,11 +467,6 @@ const getGroupMembers = async (req, res) => {
   }
 };
 
-/**
- * Get a group by ID with its messages
- * @route GET /api/groups/:groupId/with-messages
- * @access Private (Student, Instructor, Admin)
- */
 const getGroupWithMessages = async (req, res) => {
   try {
     const groupId = req.params.groupId;

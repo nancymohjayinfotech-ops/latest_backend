@@ -1,6 +1,8 @@
 const Event = require('../models/Event');
 const fs = require('fs');
 const path = require('path');
+const Group = require('../models/Group');
+const Message = require('../models/Message');
 
 // Create Event (User/Admin)
 const createEvent = async (req, res) => {
@@ -805,6 +807,179 @@ const getEventDashboard = async (req, res) => {
     }
 };
 
+const getGroupsForUser = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const userDoc = await User.findById(userId);
+    
+    if (!userDoc) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'User not found' 
+      });
+    }
+    
+    let groups = [];
+    // Get groups where user is an instructor
+    const instructorGroups = await Group.find({ admin: userId })
+      .populate('admin', 'name email avatar')
+      .populate('students', 'name email avatar');
+    
+    // Avoid duplicates
+    instructorGroups.forEach(group => {
+      if (!groups.some(g => g._id.toString() === group._id.toString())) {
+        groups.push(group);
+      }
+    });
+    
+    // Get groups where user is a student
+    const studentGroups = await Group.find({ students: userId })
+      .populate('admin', 'name email avatar')
+      .populate('students', 'name email avatar');
+    
+    // Avoid duplicates
+    studentGroups.forEach(group => {
+      if (!groups.some(g => g._id.toString() === group._id.toString())) {
+        groups.push(group);
+      }
+    });
+    
+    // Remove the current user from the student list in each group
+    const processedGroups = groups.map(group => {
+      // Create a new object to avoid modifying the mongoose document directly
+      const processedGroup = group.toObject();
+      
+      // Filter out the current user from the students array
+      if (processedGroup.students && Array.isArray(processedGroup.students)) {
+        processedGroup.students = processedGroup.students.filter(student => 
+          student._id.toString() !== userId.toString()
+        );
+      }
+      
+      return processedGroup;
+    });
+    
+    res.status(200).json({
+      success: true,
+      groups: processedGroups
+    });
+  } catch (error) {
+    console.error('Error getting groups for user:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Error getting groups for user',
+      error: error.message 
+    });
+  }
+};
+
+const getGroupWithMessages = async (req, res) => {
+    try {
+      const groupId = req.params.groupId;
+      const userId = req.user.id;
+      
+      // Extract pagination parameters for messages
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 50;
+      const skip = (page - 1) * limit;
+      
+      // Get the group with populated fields
+      const group = await Group.findById(groupId)
+        .populate('admin', 'name email avatar')
+        .populate('students', 'name email avatar');
+      
+      if (!group) {
+        return res.status(404).json({ 
+          success: false,
+          message: 'Group not found' 
+        });
+      }
+      
+      // Check if user is a member of the group
+      const isAdmin = group.admin._id.toString() === userId.toString();
+      const isStudent = group.students.some(student => student._id.toString() === userId.toString());
+      
+      if (!isAdmin && !isStudent) {
+        return res.status(403).json({
+          success: false,
+          message: 'Not authorized to access this group'
+        });
+      }
+      
+      // Process the group to remove the current user from students list
+      const processedGroup = group.toObject();
+      if (processedGroup.students && Array.isArray(processedGroup.students)) {
+        processedGroup.students = processedGroup.students.filter(student => 
+          student._id.toString() !== userId.toString()
+        );
+      }
+      
+      // Calculate member counts
+      const memberCounts = {
+        total: 1 + (group.students?.length || 0), // 1 for admin
+        students: group.students?.length || 0
+      };
+      
+      // Add member counts to the processed group
+      processedGroup.memberCounts = memberCounts;
+      
+      // Get total message count for pagination
+      const totalMessages = await Message.countDocuments({ groupId });
+      
+      // Get messages for the group
+      const messages = await Message.find({ groupId })
+        .populate('senderId', 'name email avatar')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit);
+      
+      // Process messages to add read status
+      const messagesWithReadStatus = messages.map(message => {
+        const messageObj = message.toObject();
+        const isReadByCurrentUser = messageObj.readBy?.some(read => 
+          read.userId.toString() === userId.toString()
+        ) || false;
+        const readCount = messageObj.readBy?.length || 0;
+        
+        return {
+          ...messageObj,
+          isReadByCurrentUser,
+          readCount
+        };
+      }).reverse(); // Return in chronological order
+      
+      // Calculate pagination metadata
+      const totalPages = Math.ceil(totalMessages / limit);
+      const hasNextPage = page < totalPages;
+      const hasPrevPage = page > 1;
+      
+      res.status(200).json({
+        success: true,
+        data: {
+          group: processedGroup,
+          messages: {
+            items: messagesWithReadStatus,
+            pagination: {
+              currentPage: page,
+              totalPages,
+              totalMessages,
+              limit,
+              hasNextPage,
+              hasPrevPage
+            }
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Error getting group with messages:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error getting group with messages',
+        error: error.message
+      });
+    }
+  };
+
 module.exports = {
     createEvent,
     getEventBySlug,
@@ -816,5 +991,7 @@ module.exports = {
     getStudentEnrollments,
     manageEnrollment,
     getEventEnrollments,
-    getEventDashboard
+    getEventDashboard,
+    getGroupsForUser,
+    getGroupWithMessages
 };

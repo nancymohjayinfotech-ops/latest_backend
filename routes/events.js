@@ -13,7 +13,9 @@ const {
     manageEnrollment,
     getEventEnrollments,
     getEventDashboard,
-    deleteEvent
+    deleteEvent,
+    getGroupsForUser,
+    getGroupWithMessages
 } = require('../controllers/Event');
 
 // Set uploadType for event images
@@ -33,6 +35,9 @@ router.get('/dashboard', getEventDashboard);
 // Student Routes (Protected)
 router.post('/:eventId/enroll', protect, authorize('student'), enrollInEvent);
 router.get('/my-enrollments', protect, authorize('student'), getStudentEnrollments);
+
+router.get('/my-groups', protect,authorize('event'), getGroupsForUser);
+router.get('/:groupId/with-messages', protect,authorize('admin','event'), getGroupWithMessages);
 
 // Admin Routes (Protected)
 router.post('/', protect, authorize('event'), createEvent);
