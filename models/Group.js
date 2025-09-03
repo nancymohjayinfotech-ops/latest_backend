@@ -10,6 +10,10 @@ const groupSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  category:{
+   type:String,
+   default:'General'
+  },
   admin: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
@@ -22,7 +26,15 @@ const groupSchema = new mongoose.Schema({
   students: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
-  }]
+  }],
+  isActive: {
+    type: Boolean,
+    default: true
+  },
+  deletedAt: {
+    type: Date,
+    default: null
+  }
 }, {
   timestamps: true
 });

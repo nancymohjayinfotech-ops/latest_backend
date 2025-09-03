@@ -18,6 +18,14 @@ const userSchema = new mongoose.Schema({
     sparse: true,
     trim: true
   },
+  skills: [{
+    type: String,
+    trim: true
+  }],
+  specializations:{
+    type:String,
+    trim:true
+  },
   password: {
     type: String,
     required: false,
@@ -195,6 +203,10 @@ const userSchema = new mongoose.Schema({
       type: Boolean,
       default: true
     }
+  },
+  deletedAt: {
+    type: Date,
+    default: null
   }
 }, {
   timestamps: true

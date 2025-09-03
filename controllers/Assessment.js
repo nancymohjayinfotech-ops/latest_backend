@@ -58,7 +58,7 @@ exports.getAssessmentsByCourse = async (req, res) => {
 
     const assessments = await Assessment.find({ 
       course: courseId,
-      active: true 
+      isActive: true 
     }).select('title description dueDate totalPoints createdAt');
 
     res.status(200).json({
@@ -132,7 +132,7 @@ exports.updateAssessment = async (req, res) => {
     if (description) assessment.description = description;
     if (dueDate !== undefined) assessment.dueDate = dueDate;
     if (totalPoints) assessment.totalPoints = totalPoints;
-    if (active !== undefined) assessment.active = active;
+    if (active !== undefined) assessment.isActive = active;
 
     await assessment.save();
 
@@ -178,7 +178,7 @@ exports.deleteAssessment = async (req, res) => {
     
     if (resultsCount > 0) {
       // Instead of deleting, just mark as inactive
-      assessment.active = false;
+      assessment.isActive = false;
       await assessment.save();
       
       return res.status(200).json({
@@ -212,7 +212,7 @@ exports.submitAssessment = async (req, res) => {
     
     // Validate assessment exists
     const assessment = await Assessment.findById(assessmentId);
-    if (!assessment || !assessment.active) {
+    if (!assessment || !assessment.isActive) {
       return res.status(404).json({
         success: false,
         message: 'Assessment not found or inactive'

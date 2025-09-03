@@ -31,9 +31,13 @@ const QuizSchema = new mongoose.Schema({
     type: Number, // Time limit in minutes
     default: 30
   },
-  active: {
+  isActive: {
     type: Boolean,
     default: true
+  },
+  deletedAt: {
+    type: Date,
+    default: null
   },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,

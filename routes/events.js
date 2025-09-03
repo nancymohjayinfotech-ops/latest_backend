@@ -35,10 +35,10 @@ router.post('/:eventId/enroll', protect, authorize('student'), enrollInEvent);
 router.get('/my-enrollments', protect, authorize('student'), getStudentEnrollments);
 
 // Admin Routes (Protected)
-router.post('/', protect, authorize('event'), setEventUploadType, uploadMultiple('images', 10), createEvent);
+router.post('/', protect, authorize('event'), createEvent);
 router.get('/', protect, authorize('event'), getAllEvents);
 router.get('/:id', protect, authorize('event'), getEventById);
-router.put('/:id', protect, authorize('event'), setEventUploadType, uploadMultiple('images', 10), editEvent);
+router.patch('/:id', protect, authorize('event'), editEvent);
 router.delete('/:id', protect, authorize('event'), deleteEvent);
 router.get('/:eventId/enrollments', protect, authorize('event'), getEventEnrollments);
 router.patch('/:eventId/enrollments/:enrollmentId', protect, authorize('event'), manageEnrollment);

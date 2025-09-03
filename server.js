@@ -46,6 +46,7 @@ const assessmentRoutes = require('./routes/assessments');
 const uploadRoutes = require('./routes/uploads');
 const eventRoutes = require('./routes/events');
 const adminEventRoutes = require('./routes/adminEvents');
+const adminRoutes = require('./routes/admin');
 const {seedData} = require('./seedData');
 
 app.use('/api/auth', mongoAuthRoutes);
@@ -64,7 +65,8 @@ app.use('/api/quizzes', quizRoutes);
 app.use('/api/assessments', assessmentRoutes);
 app.use('/api/uploads', uploadRoutes);
 app.use('/api/events', eventRoutes);
-app.use('/api/admin/events', adminEventRoutes);
+app.use('/api/adevents', adminEventRoutes);
+app.use('/api/admin', adminRoutes);
 
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));

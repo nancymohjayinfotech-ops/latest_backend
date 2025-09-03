@@ -74,7 +74,7 @@ exports.getQuizzesByCourse = async (req, res) => {
 
     const quizzes = await Quiz.find({ 
       course: courseId,
-      active: true 
+      isActive: true 
     }).select('title timeLimit createdAt');
 
     res.status(200).json({
@@ -168,7 +168,7 @@ exports.updateQuiz = async (req, res) => {
     // Update fields if provided
     if (title) quiz.title = title;
     if (timeLimit) quiz.timeLimit = timeLimit;
-    if (active !== undefined) quiz.active = active;
+    if (active !== undefined) quiz.isActive = active;
 
     // Update questions if provided
     if (questions && Array.isArray(questions) && questions.length > 0) {
@@ -236,7 +236,7 @@ exports.deleteQuiz = async (req, res) => {
     
     if (resultsCount > 0) {
       // Instead of deleting, just mark as inactive
-      quiz.active = false;
+      quiz.isActive = false;
       await quiz.save();
       
       return res.status(200).json({
@@ -270,7 +270,7 @@ exports.submitQuiz = async (req, res) => {
     
     // Validate quiz exists
     const quiz = await Quiz.findById(quizId);
-    if (!quiz || !quiz.active) {
+    if (!quiz || !quiz.isActive) {
       return res.status(404).json({
         success: false,
         message: 'Quiz not found or inactive'

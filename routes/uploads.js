@@ -202,9 +202,6 @@ router.post('/course', protect, (req, res, next) => {
   }
 });
 
-// @desc    Upload assessment files
-// @route   POST /api/uploads/assessment
-// @access  Private
 router.post('/assessment', protect, (req, res, next) => {
   // Initialize req.body if undefined and set upload type
   if (!req.body) req.body = {};
@@ -240,9 +237,6 @@ router.post('/assessment', protect, (req, res, next) => {
   }
 });
 
-// @desc    Delete uploaded file
-// @route   DELETE /api/uploads/file
-// @access  Private
 router.delete('/file', protect, async (req, res) => {
   try {
     const { filePath, fileName } = req.body;
@@ -285,9 +279,6 @@ router.delete('/file', protect, async (req, res) => {
   }
 });
 
-// @desc    Get upload info/limits
-// @route   GET /api/uploads/info
-// @access  Private
 router.get('/info', protect, (req, res) => {
   try {
     const uploadInfo = {
@@ -340,6 +331,233 @@ router.get('/info', protect, (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to retrieve upload information'
+    });
+  }
+});
+
+router.post('/event/images', protect, uploadMultiple('images', 10), async (req, res) => {
+  try {
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No images uploaded'
+      });
+    }
+
+    // Process uploaded images
+    const uploadedImages = req.files.map(file => {
+      const fileInfo = getFileInfo(file);
+      return {
+        filename: fileInfo.filename,
+        originalName: file.originalname,
+        url: fileInfo.url,
+        size: fileInfo.size,
+        mimetype: file.mimetype
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `${uploadedImages.length} event image(s) uploaded successfully`,
+      data: {
+        images: uploadedImages,
+        count: uploadedImages.length
+      }
+    });
+
+  } catch (error) {
+    console.error('Event image upload error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to upload event images',
+      error: error.message
+    });
+  }
+});
+
+router.post('/event/videos', protect, async (req, res) => {
+  try {
+    // For testing purposes, return sample video URLs
+    const sampleVideos = [
+      {
+        filename: 'sample-event-video-1.mp4',
+        originalName: 'Event Introduction Video.mp4',
+        url: '/uploads/events/sample-event-video-1.mp4',
+        size: 15728640, // 15MB
+        mimetype: 'video/mp4',
+        duration: 180, // 3 minutes
+        thumbnail: '/uploads/events/sample-event-video-1-thumb.jpg'
+      },
+      {
+        filename: 'sample-event-video-2.mp4',
+        originalName: 'Event Highlights.mp4',
+        url: '/uploads/events/sample-event-video-2.mp4',
+        size: 25165824, // 24MB
+        mimetype: 'video/mp4',
+        duration: 300, // 5 minutes
+        thumbnail: '/uploads/events/sample-event-video-2-thumb.jpg'
+      }
+    ];
+
+    res.status(200).json({
+      success: true,
+      message: 'Sample video URLs generated for testing',
+      data: {
+        videos: sampleVideos,
+        count: sampleVideos.length,
+        note: 'These are sample URLs for testing. Actual chunked upload will be implemented later.',
+        futureFeatures: {
+          chunkSize: '5MB',
+          maxFileSize: '500MB',
+          supportedFormats: ['mp4', 'avi', 'mov', 'wmv', 'webm'],
+          features: ['Resume upload', 'Progress tracking', 'Automatic thumbnail generation']
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Event video upload error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to process video upload request',
+      error: error.message
+    });
+  }
+});
+
+router.post('/course/image', protect, uploadSingle('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No course image uploaded'
+      });
+    }
+
+    const fileInfo = getFileInfo(req.file);
+
+    res.status(200).json({
+      success: true,
+      message: 'Course image uploaded successfully',
+      data: {
+        image: {
+          filename: fileInfo.filename,
+          originalName: req.file.originalname,
+          url: fileInfo.url,
+          size: fileInfo.size,
+          mimetype: req.file.mimetype
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Course image upload error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to upload course image',
+      error: error.message
+    });
+  }
+});
+
+router.post('/course/video', protect, async (req, res) => {
+  try {
+    // For testing purposes, return sample video URL
+    const sampleVideo = {
+      filename: 'sample-course-intro.mp4',
+      originalName: 'Course Introduction Video.mp4',
+      url: '/uploads/courses/sample-course-intro.mp4',
+      size: 52428800, // 50MB
+      mimetype: 'video/mp4',
+      duration: 600, // 10 minutes
+      thumbnail: '/uploads/courses/sample-course-intro-thumb.jpg',
+      quality: '1080p'
+    };
+
+    res.status(200).json({
+      success: true,
+      message: 'Sample course video URL generated for testing',
+      data: {
+        video: sampleVideo,
+        note: 'This is a sample URL for testing. Actual video upload will be implemented later.',
+        futureFeatures: {
+          chunkSize: '10MB',
+          maxFileSize: '2GB',
+          supportedFormats: ['mp4', 'avi', 'mov', 'wmv', 'webm'],
+          features: ['Resume upload', 'Progress tracking', 'Quality selection', 'Automatic thumbnail generation']
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Course video upload error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to process course video upload request',
+      error: error.message
+    });
+  }
+});
+
+router.delete('/event/media', protect, async (req, res) => {
+  try {
+    const { urls } = req.body;
+
+    if (!urls || !Array.isArray(urls) || urls.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No media URLs provided for deletion'
+      });
+    }
+
+    const deletionResults = [];
+
+    for (const url of urls) {
+      try {
+        // Extract filename from URL
+        const filename = path.basename(url);
+        const filePath = path.join(__dirname, '..', 'uploads', 'events', filename);
+        
+        // Delete file
+        deleteFile(filePath);
+        
+        deletionResults.push({
+          url,
+          status: 'deleted',
+          success: true
+        });
+      } catch (error) {
+        deletionResults.push({
+          url,
+          status: 'error',
+          success: false,
+          error: error.message
+        });
+      }
+    }
+
+    const successCount = deletionResults.filter(r => r.success).length;
+    const errorCount = deletionResults.filter(r => !r.success).length;
+
+    res.status(200).json({
+      success: true,
+      message: `Deleted ${successCount} file(s), ${errorCount} error(s)`,
+      data: {
+        results: deletionResults,
+        summary: {
+          total: urls.length,
+          deleted: successCount,
+          errors: errorCount
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Event media deletion error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete event media',
+      error: error.message
     });
   }
 });

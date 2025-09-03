@@ -37,8 +37,8 @@ const getDashboardStats = async (req, res) => {
     const totalEvents = activeEvents + inactiveEvents;
     
     // Count assessments
-    const activeAssessments = await Assessment.countDocuments({ active: true });
-    const inactiveAssessments = await Assessment.countDocuments({ active: false });
+    const activeAssessments = await Assessment.countDocuments({ isActive: true });
+    const inactiveAssessments = await Assessment.countDocuments({ isActive: false });
     const totalAssessments = activeAssessments + inactiveAssessments;
     
     // Calculate payment statistics
@@ -114,31 +114,31 @@ const getDashboardStats = async (req, res) => {
           total: studentCount + instructorCount
         },
         categories: {
-          active: activeCategories,
-          inactive: inactiveCategories,
+          isActive: activeCategories,
+          isInactive: inactiveCategories,
           total: totalCategories
         },
         subcategories: {
-          active: activeSubcategories,
-          inactive: inactiveSubcategories,
+          isActive: activeSubcategories,
+          isInactive: inactiveSubcategories,
           total: totalSubcategories
         },
         courses: {
-          active: activeCourses,
-          inactive: inactiveCourses,
+          isActive: activeCourses,
+          isInactive: inactiveCourses,
           total: totalCourses
         },
         groups: {
           total: totalGroups
         },
         events: {
-          active: activeEvents,
-          inactive: inactiveEvents,
+          isActive: activeEvents,
+          isInactive: inactiveEvents,
           total: totalEvents
         },
         assessments: {
-          active: activeAssessments,
-          inactive: inactiveAssessments,
+          isActive: activeAssessments,
+          isInactive: inactiveAssessments,
           total: totalAssessments
         },
         payments: {

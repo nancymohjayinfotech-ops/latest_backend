@@ -23,9 +23,13 @@ const AssessmentSchema = new mongoose.Schema({
     type: Number,
     default: 100
   },
-  active: {
+  isActive: {
     type: Boolean,
     default: true
+  },
+  deletedAt: {
+    type: Date,
+    default: null
   },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,

@@ -2,10 +2,6 @@ const mongoose = require('mongoose');
 const slugify = require('slugify');
 
 const videoSchema = new mongoose.Schema({
-  id: {
-    type: String,
-    required: true
-  },
   title: {
     type: String,
     required: true
@@ -29,10 +25,6 @@ const videoSchema = new mongoose.Schema({
 });
 
 const sectionSchema = new mongoose.Schema({
-  id: {
-    type: String,
-    required: true
-  },
   title: {
     type: String,
     required: true
@@ -134,7 +126,6 @@ const courseSchema = new mongoose.Schema({
   },
   // Course content structure
   introVideo: {
-    id: String,
     title: String,
     description: String,
     url: String,
@@ -148,6 +139,10 @@ const courseSchema = new mongoose.Schema({
   totalDuration: {
     type: Number,
     default: 0 // in seconds
+  },
+  deletedAt: {
+    type: Date,
+    default: null
   }
 }, {
   timestamps: true

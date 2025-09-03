@@ -43,6 +43,14 @@ const eventSchema = new mongoose.Schema({
         lowercase: true,
         trim: true
     },
+    contact_phone: {
+        type: String,
+        trim: true
+    },
+    contact_email: {
+        type: String,
+        trim: true
+    },
     location: {
         type: String,
         required: [true, 'Event location is required'],
@@ -113,6 +121,10 @@ const eventSchema = new mongoose.Schema({
     isActive: {
         type: Boolean,
         default: true
+    },
+    deletedAt: {
+        type: Date,
+        default: null
     },
     enrollments: [enrollmentSchema]
 }, {
