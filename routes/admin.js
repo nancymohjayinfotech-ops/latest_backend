@@ -19,6 +19,7 @@ router.delete('/students/:id', adminController.deleteStudent);
 
 // ============= INSTRUCTOR MANAGEMENT ROUTES =============
 router.get('/instructors/stats', adminController.getInstructorStats);
+router.get('/instructors/all', adminController.getAllInstructors);
 router.get('/instructors', adminController.getInstructors);
 router.get('/instructors/:id', adminController.getInstructorDetail);
 router.post('/instructors', adminController.createInstructor);
@@ -40,6 +41,10 @@ router.get('/courses/:id', adminController.getCourseDetail);
 router.post('/courses', adminController.createCourse);
 router.patch('/courses/:id', adminController.updateCourse);
 router.delete('/courses/:id', adminController.deleteCourse);
+
+// ============= COURSE CREATION HELPER ROUTES =============
+router.get('/categories', adminController.getAllCategories);
+router.get('/categories/:categoryId/subcategories', adminController.getSubcategoriesByCategory);
 
 // ============= GROUP MANAGEMENT ROUTES =============
 router.get('/groups', adminController.getGroups);

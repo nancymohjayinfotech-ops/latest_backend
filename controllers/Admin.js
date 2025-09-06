@@ -5,6 +5,8 @@ const Payment = require('../models/Payment');
 const Group = require('../models/Group');
 const Assessment = require('../models/Assessment');
 const Quiz = require('../models/Quiz');
+const Category = require('../models/Category');
+const Subcategory = require('../models/Subcategory');
 const bcrypt = require('bcryptjs');
 const mongoose = require('mongoose');
 
@@ -1755,6 +1757,90 @@ exports.logout = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error logging out',
+      error: error.message
+    });
+  }
+};
+
+// ============= CATEGORY & INSTRUCTOR APIS FOR COURSE CREATION =============
+
+// Get all categories for course creation dropdown
+exports.getAllCategories = async (req, res) => {
+  try {
+    const categories = await Category.find({ isActive: true })
+      .select('_id name slug description icon backgroundColor order')
+      .sort({ order: 1, name: 1 });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        categories
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching categories',
+      error: error.message
+    });
+  }
+};
+
+// Get subcategories by category ID for course creation dropdown
+exports.getSubcategoriesByCategory = async (req, res) => {
+  try {
+    const { categoryId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid category ID'
+      });
+    }
+
+    const subcategories = await Subcategory.find({ 
+      categoryId: categoryId, 
+      isActive: true 
+    })
+      .select('_id name slug description icon backgroundColor order categoryId')
+      .sort({ order: 1, name: 1 });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        subcategories
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching subcategories',
+      error: error.message
+    });
+  }
+};
+
+// Get all instructors for course assignment dropdown
+exports.getAllInstructors = async (req, res) => {
+  try {
+    const instructors = await User.find({ 
+      role: 'instructor', 
+      isActive: true,
+      $or: [{ deletedAt: { $exists: false } }, { deletedAt: null }]
+    })
+      .select('_id name email phoneNumber avatar expertise bio createdAt')
+      .sort({ name: 1 });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        instructors
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching instructors',
       error: error.message
     });
   }

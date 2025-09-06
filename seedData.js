@@ -228,7 +228,6 @@ const createUsers = async (categories, subcategories) => {
     name: 'Admin User',
     email: 'admin@example.com',
     password: await bcrypt.hash('admin123', 10),
-    phone: generateIndianMobile(),
     phoneNumber: generateIndianMobile(),
     role: 'admin',
     bio: 'System administrator',
