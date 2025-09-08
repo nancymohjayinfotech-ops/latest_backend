@@ -57,8 +57,4 @@ cartSchema.pre('save', async function(next) {
   next();
 });
 
-// Index for faster queries
-cartSchema.index({ user: 1 });
-cartSchema.index({ 'items.course': 1 });
-
 module.exports = mongoose.model('Cart', cartSchema);
