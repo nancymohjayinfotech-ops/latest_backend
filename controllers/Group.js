@@ -2,6 +2,7 @@ const Group = require('../models/Group');
 const User = require('../models/User');
 const Message = require('../models/Message');
 const { models: messageModels } = require('./Message');
+const { createGroupNotification } = require('./Notification');
 
 // Create a new group
 const createGroup = async (req, res) => {
@@ -45,6 +46,22 @@ const createGroup = async (req, res) => {
     
     const group = new Group(groupDoc);
     await group.save();
+
+    // Create notifications for group creation
+    try {
+      const allMemberIds = [
+        ...(groupDoc.instructors || []),
+        ...(groupDoc.students || []),
+        ...(groupDoc.events || [])
+      ];
+
+      if (allMemberIds.length > 0) {
+        await createGroupNotification(group, 'group_created', allMemberIds);
+      }
+    } catch (notificationError) {
+      console.error('Error creating group creation notifications:', notificationError);
+      // Don't fail the group creation if notifications fail
+    }
     
     res.status(201).json(group);
   } catch (error) {
@@ -371,6 +388,14 @@ const addStudent = async (req, res) => {
       groupId,
       { $addToSet: { students: studentId } }
     );
+
+    // Create notification for the added student
+    try {
+      await createGroupNotification(group, 'group_member_added', [studentId]);
+    } catch (notificationError) {
+      console.error('Error creating group member added notification:', notificationError);
+      // Don't fail the operation if notifications fail
+    }
     
     res.status(200).json({ success: true });
   } catch (error) {
@@ -416,6 +441,14 @@ const removeStudent = async (req, res) => {
       groupId,
       { $pull: { students: studentId } }
     );
+
+    // Create notification for the removed student
+    try {
+      await createGroupNotification(group, 'group_member_removed', [studentId]);
+    } catch (notificationError) {
+      console.error('Error creating group member removed notification:', notificationError);
+      // Don't fail the operation if notifications fail
+    }
     
     res.status(200).json({ success: true });
   } catch (error) {

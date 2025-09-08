@@ -4,6 +4,7 @@ const path = require('path');
 const Group = require('../models/Group');
 const Message = require('../models/Message');
 const User = require('../models/User');
+const { createEventNotification } = require('./Notification');
 
 // Create Event (User/Admin)
 const createEvent = async (req, res) => {
@@ -95,6 +96,24 @@ const createEvent = async (req, res) => {
         });
 
         await event.save();
+
+        // Create notifications for all students about the new event
+        try {
+            const students = await User.find({ 
+                role: 'student', 
+                isActive: true,
+                'notificationPreferences.newEnrollments': true 
+            }).select('_id');
+            
+            const studentIds = students.map(student => student._id);
+            
+            if (studentIds.length > 0) {
+                await createEventNotification(event, 'event_created', studentIds);
+            }
+        } catch (notificationError) {
+            console.error('Error creating event notifications:', notificationError);
+            // Don't fail the event creation if notifications fail
+        }
 
         res.status(201).json({
             success: true,
@@ -278,6 +297,20 @@ const editEvent = async (req, res) => {
         if (price !== undefined) updateData.price = price;
 
         const updatedEvent = await Event.findByIdAndUpdate(id, updateData, { new: true });
+
+        // Create notifications for enrolled students about event update
+        try {
+            const enrolledStudentIds = event.enrollments
+                .filter(enrollment => enrollment.status === 'approved')
+                .map(enrollment => enrollment.student);
+            
+            if (enrolledStudentIds.length > 0) {
+                await createEventNotification(updatedEvent, 'event_updated', enrolledStudentIds);
+            }
+        } catch (notificationError) {
+            console.error('Error creating event update notifications:', notificationError);
+            // Don't fail the event update if notifications fail
+        }
 
         res.status(200).json({
             success: true,
@@ -630,6 +663,15 @@ const manageEnrollment = async (req, res) => {
         enrollment.updatedAt = new Date();
 
         await event.save();
+
+        // Create notification for the student about enrollment status change
+        try {
+            const notificationType = status === 'approved' ? 'event_enrollment_approved' : 'event_enrollment_declined';
+            await createEventNotification(event, notificationType, [enrollment.student]);
+        } catch (notificationError) {
+            console.error('Error creating enrollment status notification:', notificationError);
+            // Don't fail the enrollment update if notifications fail
+        }
 
         res.status(200).json({
             success: true,

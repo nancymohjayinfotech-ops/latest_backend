@@ -31,14 +31,34 @@ const paymentSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['created', 'attempted', 'paid', 'failed', 'refunded'],
+    enum: ['created', 'attempted', 'paid', 'failed', 'refunded', 'cancelled'],
     default: 'created'
   },
   paymentMethod: {
     type: String
   },
-  notes: {
+  failureReason: {
     type: String
+  },
+  refundId: {
+    type: String
+  },
+  refundAmount: {
+    type: Number
+  },
+  refundStatus: {
+    type: String,
+    enum: ['pending', 'processed', 'failed']
+  },
+  receipt: {
+    type: String
+  },
+  notes: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {}
+  },
+  webhookData: {
+    type: mongoose.Schema.Types.Mixed
   },
   createdAt: {
     type: Date,

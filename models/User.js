@@ -177,6 +177,30 @@ const userSchema = new mongoose.Schema({
       default: true
     }
   }],
+  // Push notification device tokens
+  deviceTokens: [{
+    token: {
+      type: String,
+      required: true
+    },
+    platform: {
+      type: String,
+      enum: ['ios', 'android', 'web'],
+      required: true
+    },
+    deviceId: {
+      type: String,
+      required: true
+    },
+    isActive: {
+      type: Boolean,
+      default: true
+    },
+    lastUsed: {
+      type: Date,
+      default: Date.now
+    }
+  }],
   // Notification preferences
   notificationPreferences: {
     session: {
@@ -185,7 +209,7 @@ const userSchema = new mongoose.Schema({
     },
     messages: {
       type: Boolean,
-      default: false
+      default: true
     },
     feedBack: {
       type: Boolean,
@@ -199,7 +223,15 @@ const userSchema = new mongoose.Schema({
       type: Boolean,
       default: true
     },
-    messages: {
+    groupMessages: {
+      type: Boolean,
+      default: true
+    },
+    groupMemberAdded: {
+      type: Boolean,
+      default: true
+    },
+    pushNotifications: {
       type: Boolean,
       default: true
     }

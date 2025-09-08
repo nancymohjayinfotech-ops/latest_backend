@@ -40,6 +40,7 @@ const groupRoutes = require('./routes/groups');
 const messageRoutes = require('./routes/messages');
 const dashboardRoutes = require('./routes/dashboard');
 const paymentRoutes = require('./routes/payments');
+const cartRoutes = require('./routes/cart');
 const instructorRoutes = require('./routes/instructor');
 const quizRoutes = require('./routes/quizzes');
 const assessmentRoutes = require('./routes/assessments');
@@ -47,6 +48,8 @@ const uploadRoutes = require('./routes/uploads');
 const eventRoutes = require('./routes/events');
 const adminEventRoutes = require('./routes/adminEvents');
 const adminRoutes = require('./routes/admin');
+const notificationRoutes = require('./routes/notifications');
+const deviceTokenRoutes = require('./routes/deviceTokens');
 const {seedData} = require('./seedData');
 const studentRoutes = require('./routes/student');
 
@@ -60,7 +63,8 @@ app.use('/api/offers', offerRoutes);
 app.use('/api/groups', groupRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/dashboard', dashboardRoutes);
-app.use('/api/payment', paymentRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/cart', cartRoutes);
 app.use('/api/instructor', instructorRoutes);
 app.use('/api/quizzes', quizRoutes);
 app.use('/api/assessments', assessmentRoutes);
@@ -68,6 +72,8 @@ app.use('/api/uploads', uploadRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/adevents', adminEventRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/device-tokens', deviceTokenRoutes);
 app.use('/api/student', studentRoutes);
 
 app.get('/', (req, res) => {

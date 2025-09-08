@@ -3,6 +3,7 @@ const Course = require('../models/Course');
 const Content = require('../models/Content');
 const Subcategory = require('../models/Subcategory');
 const User = require('../models/User');
+const { createCourseNotification } = require('./Notification');
 
 // Create or update a course
 const createCourse = async (req, res) => {
@@ -197,6 +198,10 @@ const createCourse = async (req, res) => {
       const courseId = courseData._id;
       delete courseData._id; // Remove _id from the update data
       
+      // Get the original course to check if published status changed
+      const originalCourse = await Course.findById(courseId);
+      const wasPublished = originalCourse ? originalCourse.published : false;
+      
       course = await Course.findByIdAndUpdate(
         courseId,
         courseData,
@@ -210,6 +215,34 @@ const createCourse = async (req, res) => {
           message: 'Course not found'
         });
       }
+
+      // Create notifications for course updates
+      try {
+        // If course was just published, notify all students
+        if (!wasPublished && course.published) {
+          const students = await User.find({ 
+            role: 'student', 
+            isActive: true,
+            'notificationPreferences.newEnrollments': true 
+          }).select('_id');
+          
+          const studentIds = students.map(student => student._id);
+          
+          if (studentIds.length > 0) {
+            await createCourseNotification(course, 'course_published', studentIds);
+          }
+        } else if (course.published) {
+          // If course was already published and updated, notify enrolled students
+          const enrolledStudentIds = course.enrolledStudents || [];
+          
+          if (enrolledStudentIds.length > 0) {
+            await createCourseNotification(course, 'course_updated', enrolledStudentIds);
+          }
+        }
+      } catch (notificationError) {
+        console.error('Error creating course update notifications:', notificationError);
+        // Don't fail the course update if notifications fail
+      }
       
       return res.status(200).json({
         success: true,
@@ -219,6 +252,24 @@ const createCourse = async (req, res) => {
       // Create new course
       course = new Course(courseData);
       await course.save();
+
+      // Create notifications for students about new course
+      try {
+        const students = await User.find({ 
+          role: 'student', 
+          isActive: true,
+          'notificationPreferences.newEnrollments': true 
+        }).select('_id');
+        
+        const studentIds = students.map(student => student._id);
+        
+        if (studentIds.length > 0) {
+          await createCourseNotification(course, 'course_created', studentIds);
+        }
+      } catch (notificationError) {
+        console.error('Error creating course notifications:', notificationError);
+        // Don't fail the course creation if notifications fail
+      }
       
       return res.status(201).json({
         success: true,
