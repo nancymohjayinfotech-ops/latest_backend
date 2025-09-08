@@ -6,30 +6,42 @@ const { models: messageModels } = require('./Message');
 // Create a new group
 const createGroup = async (req, res) => {
   try {
-    // Get admin user to verify role
-    const adminUser = await User.findById(req.user.id);
+    // Get user to verify role
+    const user = await User.findById(req.user.id);
     
-    if (!adminUser) {
+    if (!user) {
       return res.status(404).json({ 
         success: false,
-        message: 'Admin user not found' 
+        message: 'User not found' 
       });
     }
     
-    if (adminUser.role !== 'admin') {
+    // Allow admin, instructor, and event users to create groups
+    if (!['admin', 'instructor', 'event'].includes(user.role)) {
       return res.status(403).json({ 
         success: false,
-        message: 'Only admin users can create groups' 
+        message: 'Only admin, instructor, or event users can create groups' 
       });
     }
     
     const groupDoc = {
       name: req.body.name,
       description: req.body.description || '',
-      admin: req.user.id,
+      admin: user.role === 'admin' ? req.user.id : null,
       instructors: req.body.instructors || [],
-      students: req.body.students || []
+      students: req.body.students || [],
+      events: req.body.events || []
     };
+    
+    // If creator is instructor, add them to instructors array
+    if (user.role === 'instructor' && !groupDoc.instructors.includes(req.user.id)) {
+      groupDoc.instructors.push(req.user.id);
+    }
+    
+    // If creator is event organizer, add them to events array
+    if (user.role === 'event' && !groupDoc.events.includes(req.user.id)) {
+      groupDoc.events.push(req.user.id);
+    }
     
     const group = new Group(groupDoc);
     await group.save();
@@ -60,6 +72,7 @@ const getAllGroups = async (req, res) => {
       .populate('admin', 'name email avatar')
       .populate('instructors', 'name email avatar')
       .populate('students', 'name email avatar')
+      .populate('events', 'name email avatar')
       .skip(skip)
       .limit(limit)
       .lean(); // Use lean() for better performance when adding computed fields
@@ -68,9 +81,10 @@ const getAllGroups = async (req, res) => {
     const groupsWithMemberCount = groups.map(group => ({
       ...group,
       memberCount: {
-        total: (group.instructors?.length || 0) + (group.students?.length || 0),
+        total: (group.instructors?.length || 0) + (group.students?.length || 0) + (group.events?.length || 0),
         instructors: group.instructors?.length || 0,
-        students: group.students?.length || 0
+        students: group.students?.length || 0,
+        events: group.events?.length || 0
       }
     }));
 
@@ -110,7 +124,8 @@ const getGroupById = async (req, res) => {
     const group = await Group.findById(req.params.groupId)
       .populate('admin', 'name email avatar')
       .populate('instructors', 'name email avatar')
-      .populate('students', 'name email avatar');
+      .populate('students', 'name email avatar')
+      .populate('events', 'name email avatar');
     
     if (!group) {
       return res.status(404).json({ 
@@ -164,10 +179,25 @@ const getGroupsForUser = async (req, res) => {
     const studentGroups = await Group.find({ students: userId })
       .populate('admin', 'name email avatar')
       .populate('instructors', 'name email avatar')
-      .populate('students', 'name email avatar');
+      .populate('students', 'name email avatar')
+      .populate('events', 'name email avatar');
+    
+    // Get groups where user is an event organizer
+    const eventGroups = await Group.find({ events: userId })
+      .populate('admin', 'name email avatar')
+      .populate('instructors', 'name email avatar')
+      .populate('students', 'name email avatar')
+      .populate('events', 'name email avatar');
     
     // Avoid duplicates
     studentGroups.forEach(group => {
+      if (!groups.some(g => g._id.toString() === group._id.toString())) {
+        groups.push(group);
+      }
+    });
+    
+    // Avoid duplicates for event groups
+    eventGroups.forEach(group => {
       if (!groups.some(g => g._id.toString() === group._id.toString())) {
         groups.push(group);
       }
@@ -308,14 +338,15 @@ const addStudent = async (req, res) => {
       });
     }
     
-    // Check if user is admin or instructor
-    const isAdmin = group.admin.toString() === userId.toString();
+    // Check if user is admin, instructor, or event organizer
+    const isAdmin = group.admin && group.admin.toString() === userId.toString();
     const isInstructor = group.instructors.some(id => id.toString() === userId.toString());
+    const isEventOrganizer = group.events.some(id => id.toString() === userId.toString());
     
-    if (!isAdmin && !isInstructor) {
+    if (!isAdmin && !isInstructor && !isEventOrganizer) {
       return res.status(403).json({ 
         success: false,
-        message: 'Only the group admin or instructors can add students' 
+        message: 'Only the group admin, instructors, or event organizers can add students' 
       });
     }
     
@@ -368,10 +399,15 @@ const removeStudent = async (req, res) => {
       });
     }
 
-    if (group.admin.toString() !== adminId.toString() && group.instructors.some(id => id.toString() !== adminId.toString())) {
+    // Check if user is admin, instructor, or event organizer
+    const isAdmin = group.admin && group.admin.toString() === adminId.toString();
+    const isInstructor = group.instructors.some(id => id.toString() === adminId.toString());
+    const isEventOrganizer = group.events.some(id => id.toString() === adminId.toString());
+    
+    if (!isAdmin && !isInstructor && !isEventOrganizer) {
       return res.status(403).json({ 
         success: false,
-        message: 'Only the group admin or instructors can remove students' 
+        message: 'Only the group admin, instructors, or event organizers can remove students' 
       });
     }
     
@@ -440,7 +476,8 @@ const getGroupMembers = async (req, res) => {
     const group = await Group.findById(groupId)
       .populate('admin', 'name email avatar role')
       .populate('instructors', 'name email avatar role')
-      .populate('students', 'name email avatar role');
+      .populate('students', 'name email avatar role')
+      .populate('events', 'name email avatar role');
     
     if (!group) {
       return res.status(404).json({ 
@@ -454,7 +491,8 @@ const getGroupMembers = async (req, res) => {
       data: {
         admin: group.admin,
         instructors: group.instructors,
-        students: group.students
+        students: group.students,
+        events: group.events
       }
     });
   } catch (error) {
@@ -481,7 +519,8 @@ const getGroupWithMessages = async (req, res) => {
     const group = await Group.findById(groupId)
       .populate('admin', 'name email avatar')
       .populate('instructors', 'name email avatar')
-      .populate('students', 'name email avatar');
+      .populate('students', 'name email avatar')
+      .populate('events', 'name email avatar');
     
     if (!group) {
       return res.status(404).json({ 
@@ -491,11 +530,12 @@ const getGroupWithMessages = async (req, res) => {
     }
     
     // Check if user is a member of the group
-    const isAdmin = group.admin._id.toString() === userId.toString();
+    const isAdmin = group.admin && group.admin._id.toString() === userId.toString();
     const isInstructor = group.instructors.some(instructor => instructor._id.toString() === userId.toString());
     const isStudent = group.students.some(student => student._id.toString() === userId.toString());
+    const isEventOrganizer = group.events.some(event => event._id.toString() === userId.toString());
     
-    if (!isAdmin && !isInstructor && !isStudent) {
+    if (!isAdmin && !isInstructor && !isStudent && !isEventOrganizer) {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to access this group'
@@ -512,9 +552,10 @@ const getGroupWithMessages = async (req, res) => {
     
     // Calculate member counts
     const memberCounts = {
-      total: 1 + (group.instructors?.length || 0) + (group.students?.length || 0), // 1 for admin
+      total: (group.admin ? 1 : 0) + (group.instructors?.length || 0) + (group.students?.length || 0) + (group.events?.length || 0),
       instructors: group.instructors?.length || 0,
-      students: group.students?.length || 0
+      students: group.students?.length || 0,
+      events: group.events?.length || 0
     };
     
     // Add member counts to the processed group
@@ -577,6 +618,95 @@ const getGroupWithMessages = async (req, res) => {
   }
 };
 
+// Add event organizer to group (admin only)
+const addEvent = async (req, res) => {
+  try {
+    const adminId = req.user.id;
+    const groupId = req.params.groupId;
+    const eventId = req.body.eventId;
+    
+    const group = await Group.findById(groupId);
+    
+    if (!group) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Group not found' 
+      });
+    }
+
+    if (group.admin && group.admin.toString() !== adminId.toString()) {
+      return res.status(403).json({ 
+        success: false,
+        message: 'Only the group admin can add event organizers' 
+      });
+    }
+    
+    // Verify event organizer exists
+    const eventDoc = await User.findById(eventId);
+    if (!eventDoc) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Event organizer not found' 
+      });
+    }
+    
+    // Add event organizer to group
+    await Group.findByIdAndUpdate(
+      groupId,
+      { $addToSet: { events: eventId } }
+    );
+    
+    res.status(200).json({ success: true });
+  } catch (error) {
+    console.error('Error adding event organizer to group:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Error adding event organizer to group',
+      error: error.message 
+    });
+  }
+};
+
+// Remove event organizer from group (admin only)
+const removeEvent = async (req, res) => {
+  try {
+    const adminId = req.user.id;
+    const groupId = req.params.groupId;
+    const eventId = req.params.eventId;
+    
+    const group = await Group.findById(groupId);
+    
+    if (!group) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Group not found' 
+      });
+    }
+    
+    if (group.admin && group.admin.toString() !== adminId.toString()) {
+      return res.status(403).json({ 
+        success: false,
+        message: 'Only the group admin can remove event organizers' 
+      });
+    }
+    
+    // Remove event organizer from group
+    await Group.findByIdAndUpdate(
+      groupId,
+      { $pull: { events: eventId } }
+    );
+    
+    res.status(200).json({ success: true });
+  } catch (error) {
+    console.error('Error removing event organizer from group:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Error removing event organizer from group',
+      error: error.message 
+    });
+  }
+};
+
 module.exports = {
   createGroup,
   getAllGroups,
@@ -588,5 +718,7 @@ module.exports = {
   removeInstructor,
   addStudent,
   removeStudent,
-  leaveGroup
+  leaveGroup,
+  addEvent,
+  removeEvent
 };

@@ -30,6 +30,10 @@ exports.getDashboardStats = async (req, res) => {
       role: 'instructor',
       $or: [{ deletedAt: { $exists: false } }, { deletedAt: null }]
     });
+    const totalEventOrganizers = await User.countDocuments({ 
+      role: 'event',
+      $or: [{ deletedAt: { $exists: false } }, { deletedAt: null }]
+    });
     const totalCourses = await Course.countDocuments({
       $or: [{ deletedAt: { $exists: false } }, { deletedAt: null }]
     });
@@ -129,6 +133,7 @@ exports.getDashboardStats = async (req, res) => {
           totalUsers,
           totalStudents,
           totalInstructors,
+          totalEventOrganizers,
           totalCourses,
           totalEvents,
           totalRevenue: totalRevenue[0]?.total || 0,
@@ -1295,9 +1300,10 @@ exports.getGroups = async (req, res) => {
     sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
 
     const groups = await Group.find(query)
-      .select('name category description students instructors isActive createdAt') // pick only needed fields
+      .select('name category description students instructors events isActive createdAt') // pick only needed fields
       .populate('students', '_id')  // only need _id to count
       .populate('instructors', '_id') // only need _id to count
+      .populate('events', '_id') // only need _id to count
       .sort(sortOptions)
       .skip(skip)
       .limit(parseInt(limit));
@@ -1310,7 +1316,7 @@ exports.getGroups = async (req, res) => {
       title: group.name,
       category: group.category,
       description: group.description,
-      totalMembers: (group.students?.length || 0) + (group.instructors?.length || 0),
+      totalMembers: (group.students?.length || 0) + (group.instructors?.length || 0) + (group.events?.length || 0),
       status: group.isActive,
       createdAt: group.createdAt
     }));
@@ -1344,6 +1350,7 @@ exports.getGroupDetail = async (req, res) => {
     const group = await Group.findById(id)
       .populate('students', 'name email role avatar phoneNumber')
       .populate('instructors', 'name email role avatar phoneNumber')
+      .populate('events', 'name email role avatar phoneNumber')
       .populate('admin', 'name email avatar');
 
     if (!group) {
@@ -1355,6 +1362,7 @@ exports.getGroupDetail = async (req, res) => {
 
     const students = group.students;
     const instructors = group.instructors;
+    const events = group.events;
 
     // Fetch messages with pagination
     const Message = require('../models/Message');
@@ -1374,14 +1382,16 @@ exports.getGroupDetail = async (req, res) => {
       data: {
         group,
         stats: {
-          totalMembers: group.students.length + group.instructors.length,
+          totalMembers: group.students.length + group.instructors.length + (group.events?.length || 0),
           students: students.length,
           instructors: instructors.length,
+          events: events?.length || 0,
           totalMessages
         },
         membersByRole: {
           students,
-          instructors
+          instructors,
+          events
         },
         messages: {
           data: messages,
@@ -1407,7 +1417,7 @@ exports.getUsersForGroup = async (req, res) => {
   try {
     const { role = 'all', search = '', groupId } = req.query;
     
-    const query = { role: { $in: ['student', 'instructor'] } };
+    const query = { role: { $in: ['student', 'instructor', 'event'] } };
     
     if (role !== 'all') {
       query.role = role;
@@ -1424,7 +1434,7 @@ exports.getUsersForGroup = async (req, res) => {
     if (groupId) {
       const group = await Group.findById(groupId);
       if (group) {
-        query._id = { $nin: [...group.students, ...group.instructors] };
+        query._id = { $nin: [...group.students, ...group.instructors, ...(group.events || [])] };
       }
     }
 
@@ -1518,12 +1528,16 @@ exports.addMembersToGroup = async (req, res) => {
     const updateOperations = {};
     const studentIds = members.filter(m => m.role === 'student').map(m => m.userId);
     const instructorIds = members.filter(m => m.role === 'instructor').map(m => m.userId);
+    const eventIds = members.filter(m => m.role === 'event').map(m => m.userId);
 
     if (studentIds.length > 0) {
       updateOperations.$addToSet = { ...updateOperations.$addToSet, students: { $each: studentIds } };
     }
     if (instructorIds.length > 0) {
       updateOperations.$addToSet = { ...updateOperations.$addToSet, instructors: { $each: instructorIds } };
+    }
+    if (eventIds.length > 0) {
+      updateOperations.$addToSet = { ...updateOperations.$addToSet, events: { $each: eventIds } };
     }
 
     const group = await Group.findByIdAndUpdate(
@@ -1541,7 +1555,7 @@ exports.addMembersToGroup = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: `Added ${studentIds.length} student(s) and ${instructorIds.length} instructor(s) to group`
+      message: `Added ${studentIds.length} student(s), ${instructorIds.length} instructor(s), and ${eventIds.length} event organizer(s) to group`
     });
   } catch (error) {
     res.status(500).json({
@@ -1557,14 +1571,14 @@ exports.removeMemberFromGroup = async (req, res) => {
     const { id, memberId } = req.params;
     const { role } = req.body; // Expected: "student" or "instructor"
 
-    if (!role || !['student', 'instructor'].includes(role)) {
+    if (!role || !['student', 'instructor', 'event'].includes(role)) {
       return res.status(400).json({
         success: false,
-        message: 'Role is required and must be either "student" or "instructor"'
+        message: 'Role is required and must be either "student", "instructor", or "event"'
       });
     }
 
-    const updateField = role === 'student' ? 'students' : 'instructors';
+    const updateField = role === 'student' ? 'students' : role === 'instructor' ? 'instructors' : 'events';
     const group = await Group.findByIdAndUpdate(
       id,
       { $pull: { [updateField]: memberId } },
