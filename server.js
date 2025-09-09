@@ -50,6 +50,7 @@ const adminEventRoutes = require('./routes/adminEvents');
 const adminRoutes = require('./routes/admin');
 const notificationRoutes = require('./routes/notifications');
 const deviceTokenRoutes = require('./routes/deviceTokens');
+const chatMediaRoutes = require('./routes/chatMedia');
 const {seedData} = require('./seedData');
 const studentRoutes = require('./routes/student');
 
@@ -74,6 +75,7 @@ app.use('/api/adevents', adminEventRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/device-tokens', deviceTokenRoutes);
+app.use('/api/chat-media', chatMediaRoutes);
 app.use('/api/student', studentRoutes);
 
 app.get('/', (req, res) => {

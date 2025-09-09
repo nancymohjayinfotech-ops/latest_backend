@@ -21,6 +21,12 @@ const messageSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
+  media: {
+    url: { type: String },
+    filename: { type: String },
+    mimetype: { type: String },
+    size: { type: Number }
+  },
   isEncrypted: {
     type: Boolean,
     default: true
@@ -31,7 +37,7 @@ const messageSchema = new mongoose.Schema({
   },
   messageType: {
     type: String,
-    enum: ['text', 'image', 'file'],
+    enum: ['text', 'image', 'video', 'document', 'audio'],
     default: 'text'
   },
   isEdited: {

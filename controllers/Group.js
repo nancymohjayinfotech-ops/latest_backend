@@ -177,10 +177,10 @@ const getGroupsForUser = async (req, res) => {
         message: 'User not found' 
       });
     }
-    
+
     let groups = [];
     // Get groups where user is an instructor
-    const instructorGroups = await Group.find({ instructors: userId })
+    const instructorGroups = await Group.find({  instructors: { $in: [userId] } })
       .populate('admin', 'name email avatar')
       .populate('instructors', 'name email avatar')
       .populate('students', 'name email avatar');
@@ -193,14 +193,14 @@ const getGroupsForUser = async (req, res) => {
     });
     
     // Get groups where user is a student
-    const studentGroups = await Group.find({ students: userId })
+    const studentGroups = await Group.find({ students: { $in: [userId] } })
       .populate('admin', 'name email avatar')
       .populate('instructors', 'name email avatar')
       .populate('students', 'name email avatar')
       .populate('events', 'name email avatar');
     
     // Get groups where user is an event organizer
-    const eventGroups = await Group.find({ events: userId })
+    const eventGroups = await Group.find({ events: { $in: [userId] } })
       .populate('admin', 'name email avatar')
       .populate('instructors', 'name email avatar')
       .populate('students', 'name email avatar')
@@ -219,7 +219,7 @@ const getGroupsForUser = async (req, res) => {
         groups.push(group);
       }
     });
-    
+
     // Remove the current user from the student list in each group
     const processedGroups = groups.map(group => {
       // Create a new object to avoid modifying the mongoose document directly

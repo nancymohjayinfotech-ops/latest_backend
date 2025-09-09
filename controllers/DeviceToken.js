@@ -323,17 +323,9 @@ const testPushNotification = async (req, res) => {
       });
     }
 
-    // const device = user.deviceTokens.find(d => d.deviceId === deviceId && d.isActive);
-    // if (!device) {
-    //   return res.status(404).json({
-    //     success: false,
-    //     message: 'Active device not found'
-    //   });
-    // }
-
     const { sendPushNotification } = require('../services/firebaseService');
     
-    const result = await sendPushNotification(deviceId  , {
+    const result = await sendPushNotification(deviceId, {
       title,
       message,
       priority: 'high'
@@ -341,6 +333,9 @@ const testPushNotification = async (req, res) => {
       type: 'test',
       userId: userId.toString()
     });
+
+    console.log(result);
+    
 
     if (result.success) {
       res.status(200).json({
@@ -368,11 +363,91 @@ const testPushNotification = async (req, res) => {
   }
 };
 
+// Debug notification delivery
+const debugNotificationDelivery = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { deviceId } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // const device = user.deviceTokens.find(d => d.deviceId === deviceId);
+    // if (!device) {
+    //   return res.status(404).json({
+    //     success: false,
+    //     message: 'Device not found'
+    //   });
+    // }
+
+    // Check Firebase project configuration
+    const { validateFirebaseConfig } = require('../services/firebaseService');
+    const firebaseValid = validateFirebaseConfig();
+
+    // Get Firebase project info
+    const admin = require('firebase-admin');
+    const app = admin.app();
+    const projectId = app.options.projectId;
+
+    res.status(200).json({
+      success: true,
+      data: {
+        device: {
+          deviceId: deviceId,
+          platform: 'Android',
+          isActive: true,
+          lastUsed: new Date(),
+          tokenPreview: 'No token'
+        },
+        firebase: {
+          initialized: firebaseValid,
+          projectId: projectId,
+          environment: process.env.NODE_ENV
+        },
+        user: {
+          id: userId,
+          role: user.role,
+          notificationPreferences: user.notificationPreferences
+        },
+        troubleshooting: {
+          commonIssues: [
+            'Device token expired or invalid',
+            'App not in foreground (background delivery varies by platform)',
+            'Notification permissions not granted on device',
+            'Firebase project mismatch between client and server',
+            'Network connectivity issues on device'
+          ],
+          nextSteps: [
+            'Ensure app has notification permissions',
+            'Try with app in foreground first',
+            'Verify Firebase project ID matches client configuration',
+            'Check device network connectivity',
+            'Regenerate device token if issues persist'
+          ]
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error debugging notification delivery:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to debug notification delivery',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   addDeviceToken,
   removeDeviceToken,
   getDeviceTokens,
   updateDeviceTokenStatus,
   cleanupInactiveTokens,
-  testPushNotification
+  testPushNotification,
+  debugNotificationDelivery
 };

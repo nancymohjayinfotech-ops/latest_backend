@@ -47,7 +47,7 @@ const sendSms = async (phone, otp) => {
 // Send OTP to phone number
 exports.sendOtp = async (req, res) => {
   try {
-    const { phoneNumber,role } = req.body;
+    const { phoneNumber, role } = req.body;
 
     if (!phoneNumber) {
       return res.status(400).json({
@@ -64,13 +64,17 @@ exports.sendOtp = async (req, res) => {
       });
     }
 
+    // Validate role if provided
+    const validRoles = ['admin', 'instructor', 'student', 'event'];
+    const userRole = role && validRoles.includes(role) ? role : 'student'; // Default to student if invalid
+
     // Clean phone number
     const cleanPhone = String(phoneNumber || '').replace(/[\s-()]/g, '');
 
     // Find or create user
     let user = await User.findOne({ phoneNumber: cleanPhone });
 
-    if (user && user.role !== role) {
+    if (user && user.role !== userRole) {
       return res.status(400).json({
         success: false,
         message: `Phone number already registered`
@@ -82,7 +86,7 @@ exports.sendOtp = async (req, res) => {
       user = new User({
         phoneNumber: cleanPhone,
         name: `User_${cleanPhone.slice(-4)}`, // Temporary name
-        role: role
+        role: userRole
       });
     }
 

@@ -6,7 +6,8 @@ const {
   getDeviceTokens,
   updateDeviceTokenStatus,
   cleanupInactiveTokens,
-  testPushNotification
+  testPushNotification,
+  debugNotificationDelivery
 } = require('../controllers/DeviceToken');
 const { protect, authorize } = require('../middleware/mongoAuth');
 
@@ -16,6 +17,7 @@ router.delete('/:deviceId', protect, removeDeviceToken);
 router.get('/', protect, getDeviceTokens);
 router.patch('/:deviceId/status', protect, updateDeviceTokenStatus);
 router.post('/test', protect, testPushNotification);
+router.post('/debug', protect, debugNotificationDelivery);
 
 // Admin routes
 router.delete('/cleanup/inactive', protect, authorize('admin'), cleanupInactiveTokens);

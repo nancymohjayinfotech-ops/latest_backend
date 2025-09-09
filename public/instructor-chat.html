@@ -182,6 +182,88 @@
         color: #721c24;
         border: 1px solid #f5c6cb;
       }
+      .message.media {
+        background: #f0f8ff;
+        border-left: 4px solid #2196f3;
+      }
+      .media-content {
+        margin-top: 10px;
+      }
+      .media-content img {
+        max-width: 300px;
+        max-height: 200px;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+      .media-content video {
+        max-width: 300px;
+        max-height: 200px;
+        border-radius: 8px;
+      }
+      .media-content audio {
+        width: 100%;
+        max-width: 300px;
+      }
+      .file-info {
+        background: #f8f9fa;
+        padding: 10px;
+        border-radius: 4px;
+        border: 1px solid #ddd;
+        margin-top: 5px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .file-icon {
+        font-size: 24px;
+      }
+      .file-details {
+        flex: 1;
+      }
+      .file-name {
+        font-weight: bold;
+        margin-bottom: 2px;
+      }
+      .file-size {
+        font-size: 12px;
+        color: #666;
+      }
+      .download-btn {
+        background: #4caf50;
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        border-radius: 3px;
+        cursor: pointer;
+        text-decoration: none;
+        font-size: 12px;
+      }
+      .selected-file {
+        background: #f8f9fa;
+        padding: 8px;
+        margin: 5px 0;
+        border-radius: 4px;
+        border: 1px solid #ddd;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .selected-file img {
+        width: 40px;
+        height: 40px;
+        object-fit: cover;
+        border-radius: 4px;
+      }
+      .file-preview-icon {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #e9ecef;
+        border-radius: 4px;
+        font-size: 18px;
+      }
     </style>
   </head>
   <body>
@@ -297,7 +379,10 @@
           <h3 id="chatTitle">Select a group to start chatting</h3>
         </div>
         <div id="messages" class="messages"></div>
-        <div id="typing-indicator" style="font-style: italic; color: gray; margin: 5px;"></div>
+        <div
+          id="typing-indicator"
+          style="font-style: italic; color: gray; margin: 5px"
+        ></div>
         <div class="input-area">
           <input
             type="text"
@@ -305,7 +390,20 @@
             placeholder="Type your message..."
             onkeypress="handleKeyPress(event)"
           />
+          <input
+            type="file"
+            id="fileInput"
+            multiple
+            accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt,.zip"
+            style="display: none;"
+            onchange="handleFileSelect(event)"
+          />
+          <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">📎</button>
           <button class="btn btn-primary" onclick="sendMessage()">Send</button>
+        </div>
+        <div id="filePreview" style="display: none; padding: 10px; border-top: 1px solid #eee;">
+          <div id="selectedFiles"></div>
+          <button class="btn btn-danger" onclick="clearFileSelection()" style="margin-top: 10px;">Clear Files</button>
         </div>
       </div>
     </div>
@@ -315,6 +413,7 @@
       let currentUser = null;
       let currentGroup = null;
       let authToken = null;
+      let selectedFiles = [];
 
       // Check for existing session on page load
       window.addEventListener("load", () => {
@@ -529,9 +628,11 @@
 
         socket.on("typingStatus", (data) => {
           if (data.name) {
-            typingIndicator.innerHTML = data.isTyping ? `${data.name} is typing...` : '';
+            typingIndicator.innerHTML = data.isTyping
+              ? `${data.name} is typing...`
+              : "";
           } else {
-            typingIndicator.innerHTML = '';
+            typingIndicator.innerHTML = "";
           }
         });
 
@@ -577,6 +678,7 @@
 
           if (response.ok) {
             displayGroups(data.groups);
+            
           } else {
             showStatus("Failed to load groups: " + data.error, "error");
           }
@@ -650,6 +752,14 @@
         }
       }
 
+      function formatMessageContent(content) {
+            const urlRegex = /(https?:\/\/[^\s]+)/g;
+            return content.replace(urlRegex, (url) => {
+                return `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`;
+            });
+        }
+
+
       function displayMessage(message) {
         const messagesDiv = document.getElementById("messages");
         const messageDiv = document.createElement("div");
@@ -681,8 +791,15 @@
         }
 
         const time = new Date(createdAt).toLocaleTimeString();
-        messageDiv.innerHTML = `
+        
+        // Add media class if it's a media message
+        if (message.messageType !== 'text' && message.media) {
+          messageDiv.classList.add('media');
+        }
+        
+        let messageContent = `
                 <div class="message-header">
+                    <strong>${senderName}</strong>
                     <span class="message-time">${time}</span>
                     ${
                       message.isEdited
@@ -690,24 +807,45 @@
                         : ""
                     }
                 </div>
-                <div>${message.content}</div>
+                <div>${ formatMessageContent(message.content)}</div>
             `;
+            
+        // Add media content if present
+        if (message.media && message.media.url) {
+          messageContent += `<div class="media-content">${renderMediaContent(message.media, message.messageType)}</div>`;
+        }
+        
+        messageDiv.innerHTML = messageContent;
 
         messagesDiv.appendChild(messageDiv);
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+        markMessageAsRead(message._id, currentGroup._id, currentUser._id);
       }
 
-      function sendMessage() {
+      async function sendMessage() {
         const messageInput = document.getElementById("messageInput");
         const content = messageInput.value.trim();
 
-        if (!content || !currentGroup) {
-          showStatus("Please select a group and enter a message", "error");
+        if (!currentGroup) {
+          showStatus("Please select a group first", "error");
           return;
         }
 
         if (!socket || !socket.connected) {
           showStatus("Not connected to chat server", "error");
+          return;
+        }
+
+        // Handle file uploads first
+        if (selectedFiles.length > 0) {
+          await uploadFiles();
+          return;
+        }
+
+        // Handle text message
+        if (!content) {
+          showStatus("Please enter a message", "error");
           return;
         }
 
@@ -906,6 +1044,168 @@
         setTimeout(() => {
           statusDiv.innerHTML = "";
         }, 5000);
+      }
+
+      function markMessageAsRead(messageId, groupId, userId) {
+          socket.emit("messageRead", {
+            messageId: messageId,
+            userId: userId,
+            groupId: groupId,
+          });
+        }
+
+      // File handling functions
+      function handleFileSelect(event) {
+        const files = Array.from(event.target.files);
+        selectedFiles = files;
+        displayFilePreview();
+      }
+
+      function displayFilePreview() {
+        const previewDiv = document.getElementById('filePreview');
+        const selectedFilesDiv = document.getElementById('selectedFiles');
+        
+        if (selectedFiles.length === 0) {
+          previewDiv.style.display = 'none';
+          return;
+        }
+
+        previewDiv.style.display = 'block';
+        selectedFilesDiv.innerHTML = '';
+
+        selectedFiles.forEach((file, index) => {
+          const fileDiv = document.createElement('div');
+          fileDiv.className = 'selected-file';
+          
+          const fileIcon = getFileIcon(file.type);
+          const fileSize = formatFileSize(file.size);
+          
+          if (file.type.startsWith('image/')) {
+            const img = document.createElement('img');
+            img.src = URL.createObjectURL(file);
+            img.onload = () => URL.revokeObjectURL(img.src);
+            fileDiv.appendChild(img);
+          } else {
+            const iconDiv = document.createElement('div');
+            iconDiv.className = 'file-preview-icon';
+            iconDiv.textContent = fileIcon;
+            fileDiv.appendChild(iconDiv);
+          }
+          
+          const detailsDiv = document.createElement('div');
+          detailsDiv.innerHTML = `
+            <div class="file-name">${file.name}</div>
+            <div class="file-size">${fileSize}</div>
+          `;
+          fileDiv.appendChild(detailsDiv);
+          
+          const removeBtn = document.createElement('button');
+          removeBtn.textContent = '×';
+          removeBtn.style.cssText = 'background: #f44336; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer;';
+          removeBtn.onclick = () => removeFile(index);
+          fileDiv.appendChild(removeBtn);
+          
+          selectedFilesDiv.appendChild(fileDiv);
+        });
+      }
+
+      function removeFile(index) {
+        selectedFiles.splice(index, 1);
+        displayFilePreview();
+      }
+
+      function clearFileSelection() {
+        selectedFiles = [];
+        document.getElementById('fileInput').value = '';
+        displayFilePreview();
+      }
+
+      function getFileIcon(mimeType) {
+        if (mimeType.startsWith('image/')) return '🖼️';
+        if (mimeType.startsWith('video/')) return '🎥';
+        if (mimeType.startsWith('audio/')) return '🎵';
+        if (mimeType.includes('pdf')) return '📄';
+        if (mimeType.includes('word') || mimeType.includes('document')) return '📝';
+        if (mimeType.includes('zip') || mimeType.includes('compressed')) return '📦';
+        return '📎';
+      }
+
+      function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+      }
+
+      async function uploadFiles() {
+        if (selectedFiles.length === 0) return null;
+
+        const formData = new FormData();
+        formData.append('groupId', currentGroup._id);
+        
+        selectedFiles.forEach(file => {
+          formData.append('files', file);
+        });
+
+        try {
+          const response = await fetch('/api/chat-media/upload-multiple', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${authToken}`
+            },
+            body: formData
+          });
+
+          const data = await response.json();
+          
+          if (response.ok) {
+            // Messages are already saved and will be broadcasted by the server
+            // No need to emit via socket as that would create duplicates
+            
+            clearFileSelection();
+            showStatus(`${data.data.messages.length} file(s) uploaded successfully!`, 'success');
+            return data.data.messages;
+          } else {
+            throw new Error(data.message || 'Upload failed');
+          }
+        } catch (error) {
+          showStatus('File upload failed: ' + error.message, 'error');
+          return null;
+        }
+      }
+
+      function renderMediaContent(media, messageType) {
+        const fileSize = formatFileSize(media.size);
+        
+        switch (messageType) {
+          case 'image':
+            return `<img src="${media.url}" alt="${media.filename}" onclick="window.open('${media.url}', '_blank')" />`;
+          
+          case 'video':
+            return `<video controls>
+                      <source src="${media.url}" type="${media.mimetype}">
+                      Your browser does not support the video tag.
+                    </video>`;
+          
+          case 'audio':
+            return `<audio controls>
+                      <source src="${media.url}" type="${media.mimetype}">
+                      Your browser does not support the audio tag.
+                    </audio>`;
+          
+          case 'document':
+          default:
+            const icon = getFileIcon(media.mimetype);
+            return `<div class="file-info">
+                      <div class="file-icon">${icon}</div>
+                      <div class="file-details">
+                        <div class="file-name">${media.filename}</div>
+                        <div class="file-size">${fileSize}</div>
+                      </div>
+                      <a href="${media.url}" download="${media.filename}" class="download-btn">Download</a>
+                    </div>`;
+        }
       }
     </script>
   </body>

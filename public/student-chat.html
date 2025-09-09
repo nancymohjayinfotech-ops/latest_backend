@@ -153,6 +153,62 @@
             color: #721c24;
             border: 1px solid #f5c6cb;
         }
+        .message.media {
+            background: #f0f8ff;
+            border-left: 4px solid #2196f3;
+        }
+        .media-content {
+            margin-top: 10px;
+        }
+        .media-content img {
+            max-width: 300px;
+            max-height: 200px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .media-content video {
+            max-width: 300px;
+            max-height: 200px;
+            border-radius: 8px;
+        }
+        .media-content audio {
+            width: 100%;
+            max-width: 300px;
+        }
+        .file-info {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            margin-top: 5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .file-icon {
+            font-size: 24px;
+        }
+        .file-details {
+            flex: 1;
+        }
+        .file-name {
+            font-weight: bold;
+            margin-bottom: 2px;
+        }
+        .file-size {
+            font-size: 12px;
+            color: #666;
+        }
+        .download-btn {
+            background: #4caf50;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 12px;
+        }
         .read-only-notice {
             background: #fff3cd;
             color: #856404;
@@ -245,6 +301,7 @@
                 <h3 id="chatTitle">Select a group to start reading messages</h3>
             </div>
             <div id="messages" class="messages"></div>
+            <div id="typingStatus"></div>
             <div class="input-area" style="padding: 10px; text-align: center; background: #f8f9fa; border-top: 1px solid #eee;">
                 <p style="margin: 0; color: #666; font-style: italic;">Students can read messages but cannot send messages</p>
             </div>
@@ -466,6 +523,14 @@
                 displayMessage(message);
             });
 
+            socket.on('typingStatus', (data) => {
+                if(data.isTyping){
+                    showTypingStatus(data);
+                } else {
+                    hideTypingStatus();
+                }
+            });
+
             socket.on('userJoined', (data) => {
                 if (data.name) {
                     showStatus(`${data.name} joined the group`, 'success');
@@ -491,6 +556,16 @@
             });
         }
 
+        function showTypingStatus(data) {
+            const typingStatusDiv = document.getElementById('typingStatus');
+            typingStatusDiv.innerHTML = `${data.name} is typing...`;
+        }
+
+        function hideTypingStatus() {
+            const typingStatusDiv = document.getElementById('typingStatus');
+            typingStatusDiv.innerHTML = '';
+        }
+
         async function loadGroups() {
             if (!authToken) {
                 showStatus('Please login first', 'error');
@@ -507,7 +582,7 @@
                 const data = await response.json();
                 
                 if (response.ok) {
-                    displayGroups(data);
+                    displayGroups(data.groups);
                 } else {
                     showStatus('Failed to load groups: ' + data.error, 'error');
                 }
@@ -588,6 +663,13 @@
             }
         }
 
+        function formatMessageContent(content) {
+            const urlRegex = /(https?:\/\/[^\s]+)/g;
+            return content.replace(urlRegex, (url) => {
+                return `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`;
+            });
+        }
+
         function displayMessage(message) {
             const messagesDiv = document.getElementById('messages');
             const messageDiv = document.createElement('div');
@@ -614,17 +696,32 @@
             }
             
             const time = new Date(createdAt).toLocaleTimeString();
-            messageDiv.innerHTML = `
+            
+            // Add media class if it's a media message
+            if (message.messageType !== 'text' && message.media) {
+                messageDiv.classList.add('media');
+            }
+            
+            let messageContent = `
                 <div class="message-header">
                     ${senderName}
                     <span class="message-time">${time}</span>
                     ${message.isEdited ? '<span style="color: #666;">(edited)</span>' : ''}
                 </div>
-                <div>${message.content}</div>
+                <div>${formatMessageContent(message.content)}</div>
             `;
+            
+            // Add media content if present
+            if (message.media && message.media.url) {
+                messageContent += `<div class="media-content">${renderMediaContent(message.media, message.messageType)}</div>`;
+            }
+            
+            messageDiv.innerHTML = messageContent;
             
             messagesDiv.appendChild(messageDiv);
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+            markMessageAsRead(message._id, currentGroup._id, currentUser._id);
         }
 
         // Students cannot send messages - function removed
@@ -675,6 +772,65 @@
             setTimeout(() => {
                 statusDiv.innerHTML = '';
             }, 5000);
+        }
+
+        function markMessageAsRead(messageId, groupId, userId) {
+          socket.emit("messageRead", {
+            messageId: messageId,
+            userId: userId,
+            groupId: groupId,
+          });
+        }
+
+        function renderMediaContent(media, messageType) {
+            const fileSize = formatFileSize(media.size);
+            
+            switch (messageType) {
+                case 'image':
+                    return `<img src="${media.url}" alt="${media.filename}" onclick="window.open('${media.url}', '_blank')" />`;
+                
+                case 'video':
+                    return `<video controls>
+                              <source src="${media.url}" type="${media.mimetype}">
+                              Your browser does not support the video tag.
+                            </video>`;
+                
+                case 'audio':
+                    return `<audio controls>
+                              <source src="${media.url}" type="${media.mimetype}">
+                              Your browser does not support the audio tag.
+                            </audio>`;
+                
+                case 'document':
+                default:
+                    const icon = getFileIcon(media.mimetype);
+                    return `<div class="file-info">
+                              <div class="file-icon">${icon}</div>
+                              <div class="file-details">
+                                <div class="file-name">${media.filename}</div>
+                                <div class="file-size">${fileSize}</div>
+                              </div>
+                              <a href="${media.url}" download="${media.filename}" class="download-btn">Download</a>
+                            </div>`;
+            }
+        }
+
+        function getFileIcon(mimeType) {
+            if (mimeType.startsWith('image/')) return '🖼️';
+            if (mimeType.startsWith('video/')) return '🎥';
+            if (mimeType.startsWith('audio/')) return '🎵';
+            if (mimeType.includes('pdf')) return '📄';
+            if (mimeType.includes('word') || mimeType.includes('document')) return '📝';
+            if (mimeType.includes('zip') || mimeType.includes('compressed')) return '📦';
+            return '📎';
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         }
     </script>
 </body>

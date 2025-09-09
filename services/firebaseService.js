@@ -7,6 +7,79 @@ const initializeFirebase = () => {
   return initFirebase();
 };
 
+const sendPushNotificationV2 = async (deviceToken, notification, data = {}) => {
+  try {
+    const app = initializeFirebase();
+    if (!app) {
+      throw new Error('Firebase not initialized');
+    }
+
+    // Construct the message
+    const message = {
+      token: deviceToken,
+      notification: {
+        title: notification.title,
+        body: notification.message, // required for auto display
+      },
+      data: {
+        notificationId: data.notificationId || '',
+        type: data.type || 'general',
+        eventId: data.eventId || '',
+        courseId: data.courseId || '',
+        groupId: data.groupId || '',
+        userId: data.userId || '',
+        clickAction: 'FLUTTER_NOTIFICATION_CLICK', // required for handling taps
+        ...data.customData
+      },
+      android: {
+        priority: 'high',
+        notification: {
+          channelId: 'lms_notifications', // must exist on device
+          sound: 'default',
+          icon: notification.icon || 'ic_launcher', // ensure this drawable exists
+        }
+      },
+      apns: {
+        headers: {
+          'apns-priority': '10', // high priority for iOS
+        },
+        payload: {
+          aps: {
+            alert: {
+              title: notification.title,
+              body: notification.message,
+            },
+            sound: 'default',
+            badge: notification.badge || 1,
+          }
+        }
+      }
+    };
+
+    const messaging = getMessaging();
+    const response = await messaging.send(message);
+
+    console.log('Push notification sent successfully:', {
+      messageId: response,
+      deviceToken: deviceToken.substring(0, 20) + '...',
+      title: notification.title,
+      timestamp: new Date().toISOString()
+    });
+
+    return { success: true, messageId: response };
+
+  } catch (error) {
+    console.error('Error sending push notification:', error);
+
+    if (error.code === 'messaging/registration-token-not-registered' ||
+        error.code === 'messaging/invalid-registration-token') {
+      return { success: false, error: 'INVALID_TOKEN', message: error.message };
+    }
+
+    return { success: false, error: 'SEND_FAILED', message: error.message };
+  }
+};
+
 // Send push notification to a single device
 const sendPushNotification = async (deviceToken, notification, data = {}) => {
   try {
@@ -17,12 +90,9 @@ const sendPushNotification = async (deviceToken, notification, data = {}) => {
 
     const message = {
       token: deviceToken,
-      notification: {
-        title: notification.title,
-        body: notification.message
-        // Only title & body here
-      },
       data: {
+        title: notification.title,
+        message: notification.message,
         notificationId: data.notificationId || '',
         type: data.type || 'general',
         eventId: data.eventId || '',
@@ -31,29 +101,17 @@ const sendPushNotification = async (deviceToken, notification, data = {}) => {
         userId: data.userId || '',
         clickAction: data.clickAction || 'FLUTTER_NOTIFICATION_CLICK',
         ...data.customData
-      },
-      android: {
-        notification: {
-          icon: notification.icon || 'default_icon', // Android drawable name
-          sound: 'default',
-          channelId: 'lms_notifications'
-        },
-        priority: 'high'
-      },
-      apns: {
-        payload: {
-          aps: {
-            sound: 'default',
-            badge: notification.badge || 1,
-            'content-available': 1
-          }
-        }
       }
     };
 
     const messaging = getMessaging();
     const response = await messaging.send(message);
-    console.log('Push notification sent successfully:', response);
+    console.log('Push notification sent successfully:', {
+      messageId: response,
+      deviceToken: deviceToken.substring(0, 20) + '...',
+      title: notification.title,
+      timestamp: new Date().toISOString()
+    });
     return { success: true, messageId: response };
   } catch (error) {
     console.error('Error sending push notification:', error);
@@ -297,6 +355,7 @@ const unsubscribeFromTopic = async (deviceToken, topic) => {
 module.exports = {
   initializeFirebase,
   sendPushNotification,
+  sendPushNotificationV2,
   sendMulticastPushNotification,
   sendPushNotificationToUser,
   sendPushNotificationToUsers,

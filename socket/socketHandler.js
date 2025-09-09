@@ -67,7 +67,8 @@ function initializeSocket(io) {
           senderId: socket.userData.userId,
           senderName: socket.userData.name,
           content: data.content,
-          messageType: data.messageType || 'text'
+          messageType: data.messageType || 'text',
+          media: data.media || null
         };
         
         // Save to database using model function (encryption happens in the model function)
