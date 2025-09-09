@@ -914,7 +914,7 @@ const getCoursesBySubcategory = async (req, res) => {
     // Format response with user-specific data if user is logged in
     let formattedCourses = courses;
     if (req.user) {
-      formattedCourses = await formatCoursesResponse(courses, req.user._id);
+      formattedCourses = await formatCoursesResponse(courses, req.user.id);
     }
     
     return res.status(200).json({

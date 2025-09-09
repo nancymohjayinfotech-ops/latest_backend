@@ -287,7 +287,7 @@ exports.submitQuiz = async (req, res) => {
 
     // Check if student has already submitted this quiz
     const existingResult = await QuizResult.findOne({
-      student: req.user._id,
+      student: req.user.id,
       quiz: quizId
     });
 
@@ -329,7 +329,7 @@ exports.submitQuiz = async (req, res) => {
 
     // Create quiz result
     const quizResult = new QuizResult({
-      student: req.user._id,
+      student: req.user.id,
       quiz: quizId,
       course: quiz.course,
       answers: processedAnswers,
@@ -365,7 +365,7 @@ exports.submitQuiz = async (req, res) => {
 exports.getStudentQuizResults = async (req, res) => {
   try {
     const results = await QuizResult.find({ 
-      student: req.user._id 
+      student: req.user.id 
     })
     .populate('quiz', 'title')
     .populate('course', 'title')
@@ -394,7 +394,7 @@ exports.getCourseQuizResults = async (req, res) => {
     // Verify the instructor teaches this course
     const course = await Course.findOne({
       _id: courseId,
-      instructor: req.user._id
+      instructor: req.user.id
     });
     
     if (!course && req.user.role !== 'admin') {

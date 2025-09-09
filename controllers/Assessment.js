@@ -230,7 +230,7 @@ exports.submitAssessment = async (req, res) => {
       };
 
       const assessmentResult = new AssessmentResult({
-        student: req.user._id,
+        student: req.user.id,
         assessment: assessmentId,
         course: assessment.course,
         submission,
@@ -248,7 +248,7 @@ exports.submitAssessment = async (req, res) => {
 
     // Check if student has already submitted this assessment
     const existingResult = await AssessmentResult.findOne({
-      student: req.user._id,
+      student: req.user.id,
       assessment: assessmentId
     });
 
@@ -276,7 +276,7 @@ exports.submitAssessment = async (req, res) => {
     }
 
     const assessmentResult = new AssessmentResult({
-      student: req.user._id,
+      student: req.user.id,
       assessment: assessmentId,
       course: assessment.course,
       submission,
@@ -318,7 +318,7 @@ exports.gradeAssessment = async (req, res) => {
     // Verify the instructor teaches this course
     const course = await Course.findOne({
       _id: result.course,
-      instructor: req.user._id
+      instructor: req.user.id
     });
     
     if (!course && req.user.role !== 'admin') {
@@ -341,7 +341,7 @@ exports.gradeAssessment = async (req, res) => {
     result.score = score;
     result.feedback = feedback || '';
     result.status = 'graded';
-    result.gradedBy = req.user._id;
+    result.gradedBy = req.user.id;
     result.gradedAt = new Date();
 
     await result.save();
@@ -365,7 +365,7 @@ exports.gradeAssessment = async (req, res) => {
 exports.getStudentAssessmentResults = async (req, res) => {
   try {
     const results = await AssessmentResult.find({ 
-      student: req.user._id 
+      student: req.user.id 
     })
     .populate('assessment', 'title totalPoints')
     .populate('course', 'title')
@@ -394,7 +394,7 @@ exports.getCourseAssessmentResults = async (req, res) => {
     // Verify the instructor teaches this course
     const course = await Course.findOne({
       _id: courseId,
-      instructor: req.user._id
+      instructor: req.user.id
     });
     
     if (!course && req.user.role !== 'admin') {
