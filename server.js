@@ -25,6 +25,7 @@ app.use(express.json());
 app.use(express.static('public'));
 // Serve uploaded files statically
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use("/hls", express.static(path.join(__dirname, "hls")));
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(morgan('dev'));

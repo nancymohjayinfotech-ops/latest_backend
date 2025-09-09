@@ -460,26 +460,23 @@ router.post('/course/image', protect, uploadSingle('image'), async (req, res) =>
   }
 });
 
-router.post('/course/video', protect, async (req, res) => {
+router.post('/course/video', protect,uploadSingle('video'), async (req, res) => {
   try {
     // For testing purposes, return sample video URL
-    const sampleVideo = {
-      filename: 'sample-course-intro.mp4',
-      originalName: 'Course Introduction Video.mp4',
-      url: '/uploads/courses/sample-course-intro.mp4',
-      size: 52428800, // 50MB
-      mimetype: 'video/mp4',
-      duration: 600, // 10 minutes
-      thumbnail: '/uploads/courses/sample-course-intro-thumb.jpg',
-      quality: '1080p'
-    };
+
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No video file uploaded' });
+    }
+
+    const videoFile = req.file; 
+
+    const fileInfo = getFileInfo(videoFile);
 
     res.status(200).json({
       success: true,
-      message: 'Sample course video URL generated for testing',
+      message: 'Course video uploaded successfully',
       data: {
-        video: sampleVideo,
-        note: 'This is a sample URL for testing. Actual video upload will be implemented later.',
+        video: fileInfo,
         futureFeatures: {
           chunkSize: '10MB',
           maxFileSize: '2GB',

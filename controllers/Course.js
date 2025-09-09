@@ -384,7 +384,7 @@ const getCourseBySlug = async (req, res) => {
     let isEnrolled = false;
     if (req.user && req.user.role === 'student') {
       isEnrolled = course.enrolledStudents.some(studentId => 
-        studentId.toString() === req.user._id.toString()
+        studentId.toString() === req.user.id.toString()
       );
     }
     
