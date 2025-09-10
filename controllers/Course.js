@@ -1129,9 +1129,13 @@ const getRecommendedCourses = async (req, res) => {
     let recommendedCourses = [];
     let totalCount = 0;
 
-    const enrolledCourseIds = user.enrolledCourses
-    .map(enrollment => enrollment?.toString())
-    .filter(Boolean);
+    // const enrolledCourseIds = user.enrolledCourses
+    // .map(enrollment => enrollment?.toString())
+    // .filter(Boolean);
+
+     const enrolledCourseIds = user.enrolledCourses
+  .map(enrollment => enrollment.course?._id?.toString())
+  .filter(Boolean);
 
     // If user has interests
     if (user.interests?.categories?.length > 0) {
