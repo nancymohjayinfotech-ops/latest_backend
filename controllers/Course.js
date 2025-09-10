@@ -731,14 +731,50 @@ const addRating = async (req,res) => {
 };
 
 // Enroll student in course
-const enrollStudent = async (req,res) => {
-  try {
-    // Use the authenticated user's ID from req.user
-    await Course.findByIdAndUpdate(
-      req.params.id,
-      { $addToSet: { enrolledStudents: req.user.id } }
-    );
+// const enrollStudent = async (req,res) => {
+//   try {
+//     // Use the authenticated user's ID from req.user
+//     await Course.findByIdAndUpdate(
+//       req.params.id,
+//       { $addToSet: { enrolledStudents: req.user.id } }
+//     );
     
+//     return res.status(200).json({
+//       success: true,
+//       message: 'Successfully enrolled in course'
+//     });
+//   } catch (error) {
+//     console.error('Error enrolling student in course:', error);
+//     return res.status(500).json({
+//       success: false,
+//       message: 'Error enrolling student in course'
+//     });
+//   }
+// };
+
+const enrollStudent = async (req, res) => {
+  try {
+    const courseId = req.params.id;
+    const userId = req.user.id;
+
+    // Add student to course
+    await Course.findByIdAndUpdate(
+      courseId,
+      { $addToSet: { enrolledStudents: userId } },
+      { new: true }
+    );
+
+    // Add course to student's enrolledCourses
+    await User.findByIdAndUpdate(
+      userId,
+      { 
+        $addToSet: { 
+          enrolledCourses: { course: courseId } 
+        } 
+      },
+      { new: true }
+    );
+
     return res.status(200).json({
       success: true,
       message: 'Successfully enrolled in course'
