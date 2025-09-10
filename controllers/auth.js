@@ -26,13 +26,10 @@ const generateSessionToken = () => {
   return crypto.randomBytes(32).toString('hex');
 };
 
-// Phone validation function
-const validatePhoneNumber = (phone) => {
-  // Convert to string if it's not already
-  const phoneStr = String(phone || '');
-  // Basic phone validation - adjust regex based on your requirements
-  const phoneRegex = /^[1-9]\d{1,14}$/;
-  return phoneRegex.test(phoneStr.replace(/[\s-()]/g, ''));
+const validatePhoneNumber = (phone, minLength = 10, maxLength = 12) => {
+  const phoneStr = String(phone || '').replace(/[\s-()]/g, '');
+  const phoneRegex = new RegExp(`^[0-9]{${minLength},${maxLength}}$`);
+  return phoneRegex.test(phoneStr);
 };
 
 // SMS placeholder function
