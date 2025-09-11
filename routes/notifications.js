@@ -15,18 +15,18 @@ const {
 const { protect, authorize } = require('../middleware/mongoAuth');
 
 // User notification routes
-router.get('/', protect, authorize('student', 'instructor', 'event'), getUserNotifications);
-router.get('/unread-count', protect, authorize('student', 'instructor', 'event'), getUnreadCount);
-router.get('/preferences', protect, authorize('student', 'instructor', 'event'), getNotificationPreferences);
-router.put('/preferences', protect, authorize('student', 'instructor', 'event'), updateNotificationPreferences);
+router.get('/', protect, authorize('student', 'instructor', 'event','admin'), getUserNotifications);
+router.get('/unread-count', protect, authorize('student', 'instructor', 'event','admin'), getUnreadCount);
+router.get('/preferences', protect, authorize('student', 'instructor', 'event','admin'), getNotificationPreferences);
+router.put('/preferences', protect, authorize('student', 'instructor', 'event','admin'), updateNotificationPreferences);
 
 // Mark notifications as read
-router.patch('/:notificationId/read', protect, authorize('student', 'instructor', 'event'), markAsRead);
-router.patch('/mark-multiple-read', protect, authorize('student', 'instructor', 'event'), markMultipleAsRead);
-router.patch('/mark-all-read', protect, authorize('student', 'instructor', 'event'), markAllAsRead);
+router.patch('/:notificationId/read', protect, authorize('student', 'instructor', 'event','admin'), markAsRead);
+router.patch('/mark-multiple-read', protect, authorize('student', 'instructor', 'event','admin'), markMultipleAsRead);
+router.patch('/mark-all-read', protect, authorize('student', 'instructor', 'event','admin'), markAllAsRead);
 
 // Delete notification
-router.delete('/:notificationId', protect, authorize('student', 'instructor', 'event'), deleteNotification);
+router.delete('/:notificationId', protect, authorize('student', 'instructor', 'event','admin'), deleteNotification);
 
 // Admin routes
 router.post('/create', protect, authorize('admin', 'instructor', 'event'), createNotification);
