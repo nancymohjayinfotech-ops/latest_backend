@@ -3,17 +3,42 @@ const { getEncryptionInstance } = require('../utils/encryption');
 const Message = require('../models/Message');
 
 function initializeSocket(io) {
+
+   io.use((socket, next) => {
+    try {
+      const authHeader = socket.handshake.headers['authorization'];
+      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return next(new Error("Authentication error: Missing or invalid token"));
+      }
+
+      const token = authHeader.split(" ")[1];
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+      // Attach user to socket for later use
+      socket.userData = {
+        userId: decoded.id,
+        name: decoded.name
+      };
+
+      next(); 
+    } catch (err) {
+      console.error("Socket auth failed:", err.message);
+      next(new Error("Authentication error"));
+    }
+  });
+
+  
   io.on('connection', (socket) => {
     console.log('New client connected', socket.id);
     
     // Store user data when they authenticate
-    socket.on('authenticate', (userData) => {
-      if (userData && userData.userId) {
-        // Store user data in socket for later use
-        socket.userData = userData;
-        console.log(`User authenticated: ${userData.userId} (${userData.name})`);
-      }
-    });
+    // socket.on('authenticate', (userData) => {
+    //   if (userData && userData.userId) {
+    //     // Store user data in socket for later use
+    //     socket.userData = userData;
+    //     console.log(`User authenticated: ${userData.userId} (${userData.name})`);
+    //   }
+    // });
     
     // Join a group chat room
     socket.on('joinGroup', (groupId) => {
