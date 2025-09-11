@@ -62,7 +62,7 @@ exports.sendOtp = async (req, res) => {
     }
 
     // Validate role if provided
-    const validRoles = ['admin', 'instructor', 'student', 'event'];
+    const validRoles = ['instructor', 'student', 'event'];
     const userRole = role && validRoles.includes(role) ? role : 'student'; // Default to student if invalid
 
     // Clean phone number
