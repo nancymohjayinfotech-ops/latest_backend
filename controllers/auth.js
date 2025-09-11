@@ -26,7 +26,7 @@ const generateSessionToken = () => {
   return crypto.randomBytes(32).toString('hex');
 };
 
-const validatePhoneNumber = (phone, minLength = 10, maxLength = 12) => {
+const validatePhoneNumber = (phone, minLength = 10, maxLength = 10) => {
   const phoneStr = String(phone || '').replace(/[\s-()]/g, '');
   const phoneRegex = new RegExp(`^[0-9]{${minLength},${maxLength}}$`);
   return phoneRegex.test(phoneStr);
