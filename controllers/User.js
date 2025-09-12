@@ -135,21 +135,65 @@ const setCollege = async (req, res) => {
         message: 'College name is required'
       });
     }
+
+    // Validation based on signup method for students
+    if (currentUser.googleId && !req.body.phoneNumber && !currentUser.phoneNumber) {
+      return res.status(400).json({
+        success: false,
+        message: 'Phone number is required for users who signed up with Google'
+      });
+    }
+
+    if (currentUser.phoneNumber && !currentUser.googleId && !req.body.email && !currentUser.email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required for users who signed up with phone number'
+      });
+    }
+
+    // Check for duplicate email or phone (excluding current user)
+    if (req.body.email && req.body.email !== currentUser.email) {
+      const duplicateEmail = await User.findOne({ email: req.body.email, _id: { $ne: req.user.id } });
+      if (duplicateEmail) {
+        return res.status(400).json({
+          success: false,
+          message: 'User with this email already exists'
+        });
+      }
+    }
+
+    if (req.body.phoneNumber && req.body.phoneNumber !== currentUser.phoneNumber) {
+      const duplicatePhone = await User.findOne({ phoneNumber: req.body.phoneNumber, _id: { $ne: req.user.id } });
+      if (duplicatePhone) {
+        return res.status(400).json({
+          success: false,
+          message: 'User with this phone number already exists'
+        });
+      }
+    }
     
     // Generate a student ID based on the college name
     const studentId = await generateStudentId(req.body.college);
     
+    // Prepare update data
+    const updateData = {
+      state: req.body.state,
+      city: req.body.city,
+      college: req.body.college,
+      studentId: studentId,
+      dob: req.body.dob,
+      updatedAt: new Date()
+    };
+
+    // Add email/phone based on what's provided
+    if (req.body.email && req.body.email !== '') updateData.email = req.body.email;
+    if (req.body.phoneNumber && req.body.phoneNumber !== '') updateData.phoneNumber = req.body.phoneNumber;
+    if (req.body.name && req.body.name !== '') updateData.name = req.body.name;
+    
     // Update the user with college and studentId
     const user = await User.findByIdAndUpdate(
       req.user.id,
-      { 
-        state: req.body.state,
-        city: req.body.city,
-        college: req.body.college,
-        studentId: studentId,
-        dob: req.body.dob,
-        updatedAt: new Date()
-      },
+      updateData,
       { new: true, runValidators: true }
     );
     

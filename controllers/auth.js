@@ -269,40 +269,45 @@ exports.verifyOtp = async (req, res) => {
     
     await user.save();
 
-    // Check profile completeness for instructor/event users
+    // Check profile completeness for instructor/event/student users
     let profileStatus = {};
-    if (['instructor', 'event'].includes(user.role)) {
-      const requiredFields = ['name', 'bio', 'dob', 'address', 'state', 'city'];
-      const missingFields = requiredFields.filter(field => !user[field] || user[field].trim() === '');
-      
-      // Check email/phone requirements based on signup method
-      if (user.googleId && (!user.phoneNumber || user.phoneNumber.trim() === '')) {
-        missingFields.push('phoneNumber');
-      }
-      if (user.phoneNumber && !user.googleId && (!user.email || user.email.trim() === '')) {
-        missingFields.push('email');
-      }
-
-      profileStatus = {
-        isProfileComplete: missingFields.length === 0,
-        missingFields: missingFields,
-        isVerified: user.isVerified,
-        verificationRequested: user.verificationRequested || false,
-        filledFields: {
-          name: user.name || '',
-          email: user.email || '',
-          phoneNumber: user.phoneNumber || '',
-          bio: user.bio || '',
-          dob: user.dob || '',
-          address: user.address || '',
-          state: user.state || '',
-          city: user.city || '',
-          ...(user.role === 'instructor' && {
-            skills: user.skills || [],
-            specializations: user.specializations || ''
-          })
+    if (['instructor', 'event', 'student'].includes(user.role)) {
+      if (user.role === 'student') {
+        // For students, check college setup completion
+        const requiredFields = ['college', 'state', 'city', 'dob'];
+        let missingFields = requiredFields.filter(field => !user[field] || user[field].trim() === '');
+        
+        // Check email/phone requirements based on signup method for students too
+        if (user.googleId && (!user.phoneNumber || user.phoneNumber.trim() === '')) {
+          missingFields.push('phoneNumber');
         }
-      };
+        if (user.phoneNumber && !user.googleId && (!user.email || user.email.trim() === '')) {
+          missingFields.push('email');
+        }
+        
+        profileStatus = {
+          isProfileComplete: missingFields.length === 0,
+          isCollegeSet: !!(user.college && user.studentId)
+        };
+      } else {
+        // For instructor/event users
+        const requiredFields = ['name', 'bio', 'dob', 'address', 'state', 'city'];
+        let missingFields = requiredFields.filter(field => !user[field] || user[field].trim() === '');
+        
+        // Check email/phone requirements based on signup method
+        if (user.googleId && (!user.phoneNumber || user.phoneNumber.trim() === '')) {
+          missingFields.push('phoneNumber');
+        }
+        if (user.phoneNumber && !user.googleId && (!user.email || user.email.trim() === '')) {
+          missingFields.push('email');
+        }
+
+        profileStatus = {
+          isProfileComplete: missingFields.length === 0,
+          isVerified: user.isVerified,
+          verificationRequested: user.verificationRequested || false
+        };
+      }
     }
 
     res.status(200).json({
@@ -312,7 +317,7 @@ exports.verifyOtp = async (req, res) => {
         accessToken,
         refreshToken,
         user,
-        ...((['instructor', 'event'].includes(user.role)) && { profileStatus })
+        ...((['instructor', 'event', 'student'].includes(user.role)) && { profileStatus })
       }
     });
   } catch (error) {
