@@ -41,22 +41,52 @@ function initializeSocket(io) {
     // });
     
     // Join a group chat room
-    socket.on('joinGroup', (groupId) => {
-      socket.join(groupId);
-      console.log(`Client ${socket.id} joined group: ${groupId}`);
+    // socket.on('joinGroup', (groupId) => {
+    //   socket.join(groupId);
+    //   console.log(`Client ${socket.id} joined group: ${groupId}`);
       
-      // Notify the room that someone joined
-      if (socket.userData) {
-        socket.to(groupId).emit('userJoined', { 
-          userId: socket.userData.userId,
-          name: socket.userData.name,
-          groupId: groupId,
-          timestamp: new Date()
-        });
-      } else {
-        socket.to(groupId).emit('userJoined', { message: 'A new user joined the chat' });
+    //   // Notify the room that someone joined
+    //   if (socket.userData) {
+    //     socket.to(groupId).emit('userJoined', { 
+    //       userId: socket.userData.userId,
+    //       name: socket.userData.name,
+    //       groupId: groupId,
+    //       timestamp: new Date()
+    //     });
+    //   } else {
+    //     socket.to(groupId).emit('userJoined', { message: 'A new user joined the chat' });
+    //   }
+    // });
+
+    socket.on('joinGroup', (data, callback) => {
+      try {
+          const groupId = data.groupId;
+          console.log(`📥 joinGroup event received from ${socket.id}:`, data);
+
+          socket.join(groupId);
+          console.log(`✅ Client ${socket.id} joined group: ${groupId}`);
+
+          // 🔑 Send acknowledgment back to Flutter
+          if (callback) {
+              callback({ success: true, groupId });
+          }
+
+          // Broadcast to group members
+          if (socket.userData) {
+              socket.to(groupId).emit('userJoined', {
+                  userId: socket.userData.userId,
+                  name: socket.userData.name,
+                  groupId,
+                  timestamp: new Date()
+              });
+          }
+      } catch (err) {
+          console.error('❌ joinGroup error:', err);
+          if (callback) {
+              callback({ success: false, error: err.message });
+          }
       }
-    });
+  });
     
     // Leave a group chat room
     socket.on('leaveGroup', (groupId) => {
@@ -163,6 +193,12 @@ function initializeSocket(io) {
         });
       }
     });
+
+        // Disconnect
+        socket.on('disconnect', () => {
+          console.log(`🔌 Client disconnected: ${socket.id}`);
+      });
+
   });
 }
 
