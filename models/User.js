@@ -239,6 +239,17 @@ const userSchema = new mongoose.Schema({
   deletedAt: {
     type: Date,
     default: null
+  },
+  isVerified: {
+    type: Boolean,
+    default: function() {
+      // Only Event and Instructor roles need verification
+      return !['event', 'instructor'].includes(this.role);
+    }
+  },
+  verificationRequested: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true

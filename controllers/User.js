@@ -5,7 +5,7 @@ const Subcategory = require('../models/Subcategory');
 // Get user profile - handles req/res directly
 const getProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select('name role avatar college studentId phoneNumber email');
+    const user = await User.findById(req.user.id).select('name role avatar college studentId phoneNumber email city state bio dob skills address specializations isVerified');
     
     if (!user) {
       return res.status(404).json({
@@ -797,6 +797,252 @@ const updateUser = async (req, res) => {
   }
 };
 
+// Unified profile update for Event and Instructor users
+const updateRoleProfile = async (req, res) => {
+  try {
+    // Check if user is instructor or event organizer
+    if (!['instructor', 'event'].includes(req.user.role)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. This endpoint is for instructors and event organizers only.'
+      });
+    }
+
+    const { name, email, phoneNumber, bio, dob, address, state, city, skills, specializations } = req.body;
+    
+    // Get current user to check signup method
+    const currentUser = await User.findById(req.user.id);
+    if (!currentUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Validation based on signup method
+    if (currentUser.googleId && !phoneNumber && !currentUser.phoneNumber) {
+      return res.status(400).json({
+        success: false,
+        message: 'Phone number is required for users who signed up with Google'
+      });
+    }
+
+    if (currentUser.phoneNumber && !email && !currentUser.email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required for users who signed up with phone number'
+      });
+    }
+
+    // Check for duplicate email or phone (excluding current user)
+    if (email && email !== currentUser.email) {
+      const duplicateEmail = await User.findOne({ email, _id: { $ne: req.user.id } });
+      if (duplicateEmail) {
+        return res.status(400).json({
+          success: false,
+          message: 'User with this email already exists'
+        });
+      }
+    }
+
+    if (phoneNumber && phoneNumber !== currentUser.phoneNumber) {
+      const duplicatePhone = await User.findOne({ phoneNumber, _id: { $ne: req.user.id } });
+      if (duplicatePhone) {
+        return res.status(400).json({
+          success: false,
+          message: 'User with this phone number already exists'
+        });
+      }
+    }
+
+    // Prepare update data
+    const updateData = { updatedAt: new Date() };
+    
+    if (name !== undefined && name !== '') updateData.name = name;
+    if (email !== undefined && email !== '') updateData.email = email;
+    if (phoneNumber !== undefined && phoneNumber !== '') updateData.phoneNumber = phoneNumber;
+    if (bio !== undefined && bio !== '') updateData.bio = bio;
+    if (dob !== undefined && dob !== '') updateData.dob = dob;
+    if (address !== undefined && address !== '') updateData.address = address;
+    if (state !== undefined && state !== '') updateData.state = state;
+    if (city !== undefined && city !== '') updateData.city = city;
+    
+    // Only update skills and specializations for instructors
+    if (req.user.role === 'instructor') {
+      if (skills !== undefined && skills !== '') updateData.skills = skills;
+      if (specializations !== undefined && specializations !== '') updateData.specializations = specializations;
+    }
+
+    // Update user
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user.id,
+      updateData,
+      { new: true, runValidators: true }
+    ).select('-password -otpHash -sessionToken -refreshToken');
+
+    return res.status(200).json({
+      success: true,
+      message: `${req.user.role} profile updated successfully`,
+    });
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+};
+
+// API for Instructor/Event to request verification from admin
+const requestVerification = async (req, res) => {
+  try {
+    // Check if user is instructor or event organizer
+    if (!['instructor', 'event'].includes(req.user.role)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. This endpoint is for instructors and event organizers only.'
+      });
+    }
+
+    // Get current user
+    const currentUser = await User.findById(req.user.id);
+    if (!currentUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Check if already verified
+    if (currentUser.isVerified) {
+      return res.status(400).json({
+        success: false,
+        message: 'Your profile is already verified'
+      });
+    }
+
+    // Check if profile is complete enough for verification
+    const requiredFields = ['name', 'bio', 'dob', 'address', 'state', 'city'];
+    const missingFields = requiredFields.filter(field => !currentUser[field] || currentUser[field].trim() === '');
+    
+    // Check email/phone requirements based on signup method
+    if (currentUser.googleId && (!currentUser.phoneNumber || currentUser.phoneNumber.trim() === '')) {
+      missingFields.push('phoneNumber');
+    }
+    if (currentUser.phoneNumber && !currentUser.googleId && (!currentUser.email || currentUser.email.trim() === '')) {
+      missingFields.push('email');
+    }
+
+    if (missingFields.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please complete your profile before requesting verification',
+        missingFields: missingFields
+      });
+    }
+
+    // Check if verification already requested
+    if (currentUser.verificationRequested) {
+      return res.status(400).json({
+        success: false,
+        message: 'Verification request already submitted. Please wait for admin review.'
+      });
+    }
+
+    // Update user to indicate verification request
+    await User.findByIdAndUpdate(
+      req.user.id,
+      { 
+        verificationRequested: true,
+        updatedAt: new Date()
+      }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: `Verification request submitted successfully. An admin will review your ${req.user.role} profile and verify it soon.`,
+    });
+  } catch (error) {
+    console.error('Error requesting verification:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+};
+
+// Admin API to verify Instructor/Event profile
+const verifyUserProfile = async (req, res) => {
+  try {
+    // Check if user is admin
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Admin privileges required.'
+      });
+    }
+
+    const { userId } = req.body;
+    
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID is required'
+      });
+    }
+
+    // Find the user to verify
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Check if user is instructor or event organizer
+    if (!['instructor', 'event'].includes(user.role)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Only instructor and event organizer profiles can be verified'
+      });
+    }
+
+    // Check if already verified
+    if (user.isVerified) {
+      return res.status(400).json({
+        success: false,
+        message: 'User is already verified'
+      });
+    }
+
+    // Update verification status and reset verification request
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { 
+        isVerified: true,
+        verificationRequested: false,
+        updatedAt: new Date()
+      },
+      { new: true, runValidators: true }
+    ).select('-password -otpHash -sessionToken -refreshToken');
+
+    return res.status(200).json({
+      success: true,
+      message: `${user.role} profile verified successfully`,
+    });
+  } catch (error) {
+    console.error('Error verifying user profile:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   getProfile,
   updateProfile,
@@ -816,5 +1062,8 @@ module.exports = {
   createUser,
   getAllUsers,
   getUserById,
-  updateUser
+  updateUser,
+  updateRoleProfile,
+  requestVerification,
+  verifyUserProfile
 };

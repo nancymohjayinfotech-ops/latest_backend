@@ -41,10 +41,88 @@ const sendSms = async (phone, otp) => {
 };
 
 
-// Send OTP to phone number
-exports.sendOtp = async (req, res) => {
+// Signup with phone number and role
+exports.signupWithPhone = async (req, res) => {
   try {
     const { phoneNumber, role } = req.body;
+
+    if (!phoneNumber) {
+      return res.status(400).json({
+        success: false,
+        message: 'Phone number is required'
+      });
+    }
+
+    if (!role) {
+      return res.status(400).json({
+        success: false,
+        message: 'Role is required'
+      });
+    }
+
+    // Validate phone number format
+    if (!validatePhoneNumber(phoneNumber)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid phone number format'
+      });
+    }
+
+    // Validate role
+    const validRoles = ['instructor', 'student', 'event'];
+    if (!validRoles.includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid role. Must be one of: instructor, student, event'
+      });
+    }
+
+    // Clean phone number
+    const cleanPhone = String(phoneNumber || '').replace(/[\s-()]/g, '');
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ phoneNumber: cleanPhone });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'User with this phone number already exists'
+      });
+    }
+
+    // Create new user
+    const user = new User({
+      phoneNumber: cleanPhone,
+      name: `User_${cleanPhone.slice(-4)}`, // Temporary name
+      role: role,
+      isVerified: !['event', 'instructor'].includes(role) // Auto-verify students and admins
+    });
+
+    await user.save();
+
+    res.status(201).json({
+      success: true,
+      message: 'User created successfully',
+      data: {
+        userId: user._id,
+        phoneNumber: cleanPhone,
+        role: role,
+        message: 'You can now login using OTP'
+      }
+    });
+  } catch (error) {
+    console.error('Signup error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error during signup',
+      error: error.message
+    });
+  }
+};
+
+// Send OTP to phone number (for login)
+exports.sendOtp = async (req, res) => {
+  try {
+    const { phoneNumber } = req.body;
 
     if (!phoneNumber) {
       return res.status(400).json({
@@ -61,29 +139,16 @@ exports.sendOtp = async (req, res) => {
       });
     }
 
-    // Validate role if provided
-    const validRoles = ['instructor', 'student', 'event'];
-    const userRole = role && validRoles.includes(role) ? role : 'student'; // Default to student if invalid
-
     // Clean phone number
     const cleanPhone = String(phoneNumber || '').replace(/[\s-()]/g, '');
 
-    // Find or create user
+    // Find existing user
     let user = await User.findOne({ phoneNumber: cleanPhone });
 
-    if (user && user.role !== userRole) {
-      return res.status(400).json({
-        success: false,
-        message: `Phone number already registered`
-      });
-    }
-    
     if (!user) {
-      // Create new user with phone number
-      user = new User({
-        phoneNumber: cleanPhone,
-        name: `User_${cleanPhone.slice(-4)}`, // Temporary name
-        role: userRole
+      return res.status(404).json({
+        success: false,
+        message: 'User not found. Please signup first.'
       });
     }
 
@@ -246,14 +311,32 @@ exports.googleLogin = async (req, res) => {
     // Find user by email
     let user = await User.findOne({ email });
 
-    if (!user) {
+    if (user) {
+      // Check if user was registered with phone/OTP (has phoneNumber but no googleId)
+      if (user.phoneNumber && !user.googleId) {
+        return res.status(400).json({
+          success: false,
+          message: 'This email is already registered with phone number. Please use OTP login instead.',
+          loginMethod: 'otp',
+          phoneNumber: user.phoneNumber.replace(/(\d{3})\d{4}(\d{3})/, '$1****$2') // Masked phone number
+        });
+      }
+      
+      // If user exists with Google ID, proceed with login
+      if (!user.googleId) {
+        // Update existing user with Google ID for future logins
+        user.googleId = sub;
+        user.avatar = picture;
+      }
+    } else {
       // Create new user
       user = new User({
         name,
         email,
         googleId: sub,
         avatar: picture,
-        role: role,
+        role: role || 'student', // Default to student if no role provided
+        isVerified: !['event', 'instructor'].includes(role || 'student') // Auto-verify students and admins
       });
     }
 

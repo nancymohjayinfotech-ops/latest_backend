@@ -6,6 +6,7 @@ const { protect } = require('../middleware/mongoAuth');
 const router = express.Router();
 
 // Phone + OTP Authentication routes
+router.post('/signup', authController.signupWithPhone);
 router.post('/send-otp', authController.sendOtp);
 router.post('/verify-otp', authController.verifyOtp);
 

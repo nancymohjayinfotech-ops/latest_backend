@@ -19,13 +19,16 @@ const {
   createUser,
   getAllUsers,
   getUserById,
-  updateUser
+  updateUser,
+  updateRoleProfile,
+  requestVerification,
+  verifyUserProfile
 } = require('../controllers/User');
 const { protect, authorize } = require('../middleware/mongoAuth');
 
 // User profile routes
 router.get('/profile', protect, getProfile);
-router.put('/profile', protect, updateProfile);
+router.patch('/profile', protect, updateProfile);
 router.post('/set-college', protect, setCollege); // New endpoint for setting college after Google sign-in
 
 router.get('/getUserByRole/:role', protect, authorize('admin','instructor'), getUserByRole);
@@ -35,7 +38,7 @@ router.get('/getUserByRole/:role/paginated', protect, authorize('admin'), getUse
 router.post('/create', protect, authorize('admin'), createUser);
 router.get('/all', protect, authorize('admin'), getAllUsers);
 router.get('/:userId', protect, authorize('admin'), getUserById);
-router.put('/update/:userId', protect, authorize('admin'), updateUser);
+router.patch('/update/:userId', protect, authorize('admin'), updateUser);
 
 // Favorite courses routes
 router.get('/favorites', protect, getFavoriteCourses);
@@ -52,5 +55,12 @@ router.delete('/cart', protect, clearCart);
 router.post('/interests', protect, setUserInterests);
 router.get('/interests', protect, getUserInterests);
 router.get('/interests/status', protect, checkInterestsStatus);
+
+// Role-specific profile update route (unified for event and instructor)
+router.patch('/profile/role', protect, updateRoleProfile);
+
+// Verification routes
+router.post('/request-verification', protect, requestVerification); // For instructors/events to request verification
+router.post('/verify', protect, authorize('admin'), verifyUserProfile); // Admin-only verification
 
 module.exports = router;
