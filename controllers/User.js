@@ -1068,7 +1068,10 @@ const verifyUserProfile = async (req, res) => {
       { 
         isVerified: true,
         verificationRequested: false,
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        sessionToken: null,
+        refreshToken: null,
+        refreshTokenExpiry: null
       },
       { new: true, runValidators: true }
     ).select('-password -otpHash -sessionToken -refreshToken');
