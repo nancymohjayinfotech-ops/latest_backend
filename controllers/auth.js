@@ -269,13 +269,50 @@ exports.verifyOtp = async (req, res) => {
     
     await user.save();
 
+    // Check profile completeness for instructor/event users
+    let profileStatus = {};
+    if (['instructor', 'event'].includes(user.role)) {
+      const requiredFields = ['name', 'bio', 'dob', 'address', 'state', 'city'];
+      const missingFields = requiredFields.filter(field => !user[field] || user[field].trim() === '');
+      
+      // Check email/phone requirements based on signup method
+      if (user.googleId && (!user.phoneNumber || user.phoneNumber.trim() === '')) {
+        missingFields.push('phoneNumber');
+      }
+      if (user.phoneNumber && !user.googleId && (!user.email || user.email.trim() === '')) {
+        missingFields.push('email');
+      }
+
+      profileStatus = {
+        isProfileComplete: missingFields.length === 0,
+        missingFields: missingFields,
+        isVerified: user.isVerified,
+        verificationRequested: user.verificationRequested || false,
+        filledFields: {
+          name: user.name || '',
+          email: user.email || '',
+          phoneNumber: user.phoneNumber || '',
+          bio: user.bio || '',
+          dob: user.dob || '',
+          address: user.address || '',
+          state: user.state || '',
+          city: user.city || '',
+          ...(user.role === 'instructor' && {
+            skills: user.skills || [],
+            specializations: user.specializations || ''
+          })
+        }
+      };
+    }
+
     res.status(200).json({
       success: true,
       message: 'Login successful',
       data: {
         accessToken,
         refreshToken,
-        user
+        user,
+        ...((['instructor', 'event'].includes(user.role)) && { profileStatus })
       }
     });
   } catch (error) {
