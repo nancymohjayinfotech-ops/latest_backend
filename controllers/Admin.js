@@ -769,6 +769,73 @@ exports.deleteInstructor = async (req, res) => {
 };
 
 // ============= EVENT MANAGEMENT =============
+
+exports.getEventsLogin = async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 10,
+      search = '',
+      status = 'all',
+      sortBy = 'createdAt',
+      sortOrder = 'desc'
+    } = req.query;
+
+    const skip = (page - 1) * limit;
+    const query = {
+      role: 'event',
+      isActive: true
+    };
+
+    if (search) {
+      query.$and = [
+        {
+          $or: [
+            { name: { $regex: search, $options: 'i' } },
+            { email: { $regex: search, $options: 'i' } },
+            { phoneNumber: { $regex: search, $options: 'i' } }
+          ]
+        }
+      ];
+      delete query.$or;
+    }
+
+    if (status !== 'all') {
+      query.isActive = status === 'active';
+    }
+
+    const sortOptions = {};
+    sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
+
+    const instructors = await User.find(query)
+      .select('-password -otpHash -sessionToken -refreshToken -interests -notificationPreferences')
+      .sort(sortOptions)
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const total = await User.countDocuments(query);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        instructors,
+        pagination: {
+          current: parseInt(page),
+          total: Math.ceil(total / limit),
+          count: total,
+          limit: parseInt(limit)
+        }
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching instructors',
+      error: error.message
+    });
+  }
+};
+
 exports.getEventStats = async (req, res) => {
   try {
     const currentDate = new Date();
