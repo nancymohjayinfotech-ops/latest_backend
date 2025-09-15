@@ -27,6 +27,7 @@ router.patch('/instructors/:id', adminController.updateInstructor);
 router.delete('/instructors/:id', adminController.deleteInstructor);
 
 // ============= EVENT MANAGEMENT ROUTES =============
+router.get('/events/accounts',adminController.getEventsLogin);
 router.get('/events/stats', adminController.getEventStats);
 router.get('/events', adminController.getEvents);
 router.get('/events/:id', adminController.getEventDetail);
