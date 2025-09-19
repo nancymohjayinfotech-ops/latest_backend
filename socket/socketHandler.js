@@ -9,6 +9,7 @@ function initializeSocket(io) {
         // Store user data when they authenticate
         socket.on('authenticate', (userData) => {
             console.log('📥 authenticate event received:', userData);
+        
             if (userData && userData.userId) {
                 socket.userData = userData;
                 console.log(`✅ User authenticated: ${userData.userId} (${userData.name})`);
@@ -69,6 +70,7 @@ function initializeSocket(io) {
         // Handle new message from socket
         socket.on('sendMessage', async(data) => {
             console.log(`📥 sendMessage event from ${socket.id}:`, data);
+            console.log("iuserdata recived",userData)
             try {
                 if (!socket.userData || !socket.userData.userId) {
                     console.warn(`❌ Message rejected (unauthenticated user) from socket ${socket.id}`);
