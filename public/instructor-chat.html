@@ -490,7 +490,7 @@
             headers: {
               "Content-Type": "application/json",
             },
-            body: JSON.stringify({ phoneNumber, role: "instructor" }),
+            body: JSON.stringify({ phoneNumber}),
           });
 
           const data = await response.json();
@@ -730,7 +730,7 @@
         if (!authToken) return;
 
         try {
-          const response = await fetch(`/api/groups/${groupId}/messages`, {
+          const response = await fetch(`/api/groups/${groupId}/with-messages`, {
             headers: {
               Authorization: `Bearer ${authToken}`,
             },
