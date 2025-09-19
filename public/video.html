@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>HLS Video Player</title>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+</head>
+<body>
+  <video id="video" controls width="640" height="360"></video>
+
+  <script>
+    const video = document.getElementById('video');
+    const videoSrc = 'https://ef8d90abd66e.ngrok-free.app/hls/output.m3u8'; // point to your .m3u8 playlist
+
+    if (Hls.isSupported()) {
+      const hls = new Hls();
+      hls.loadSource(videoSrc);
+      hls.attachMedia(video);
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      // Safari supports HLS natively
+      video.src = videoSrc;
+    }
+  </script>
+</body>
+</html>

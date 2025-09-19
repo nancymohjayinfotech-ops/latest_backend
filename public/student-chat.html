@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Chat - LMS</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+            height: 90vh;
+        }
+        .sidebar {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .chat-area {
+            background: white;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .chat-header {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+            background: #2196F3;
+            color: white;
+            border-radius: 8px 8px 0 0;
+        }
+        .messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            max-height: 400px;
+        }
+        .message {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 8px;
+            background: #f8f9fa;
+        }
+        .message.own {
+            background: #e3f2fd;
+            margin-left: 50px;
+        }
+        .message-header {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .message-time {
+            font-size: 12px;
+            color: #666;
+            margin-left: 10px;
+        }
+        .input-area {
+            padding: 20px;
+            border-top: 1px solid #eee;
+            display: flex;
+            gap: 10px;
+        }
+        .input-area input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .btn-primary {
+            background: #2196F3;
+            color: white;
+        }
+        .btn-secondary {
+            background: #4CAF50;
+            color: white;
+        }
+        .btn-danger {
+            background: #f44336;
+            color: white;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .group-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .group-item {
+            padding: 10px;
+            border: 1px solid #ddd;
+            margin-bottom: 5px;
+            border-radius: 4px;
+            cursor: pointer;
+            position: relative;
+        }
+        .group-item:hover {
+            background: #f0f0f0;
+        }
+        .group-item.active {
+            background: #e3f2fd;
+            border-color: #2196F3;
+        }
+        .leave-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            padding: 2px 6px;
+            font-size: 12px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .message.media {
+            background: #f0f8ff;
+            border-left: 4px solid #2196f3;
+        }
+        .media-content {
+            margin-top: 10px;
+        }
+        .media-content img {
+            max-width: 300px;
+            max-height: 200px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .media-content video {
+            max-width: 300px;
+            max-height: 200px;
+            border-radius: 8px;
+        }
+        .media-content audio {
+            width: 100%;
+            max-width: 300px;
+        }
+        .file-info {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            margin-top: 5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .file-icon {
+            font-size: 24px;
+        }
+        .file-details {
+            flex: 1;
+        }
+        .file-name {
+            font-weight: bold;
+            margin-bottom: 2px;
+        }
+        .file-size {
+            font-size: 12px;
+            color: #666;
+        }
+        .download-btn {
+            background: #4caf50;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 12px;
+        }
+        .read-only-notice {
+            background: #fff3cd;
+            color: #856404;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            border: 1px solid #ffeaa7;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <h3>Student Panel</h3>
+            
+            <!-- Login Section -->
+            <div id="loginSection">
+                <div class="form-group">
+                    <label>Choose Login Method:</label>
+                    <select id="loginMethod" onchange="toggleLoginMethod()">
+                        <option value="phone">Phone Number</option>
+                        <option value="google">Google Account</option>
+                    </select>
+                </div>
+                
+                <!-- Phone Login -->
+                <div id="phoneLogin">
+                    <div class="form-group">
+                        <label>Phone Number:</label>
+                        <input type="tel" id="phoneNumber" placeholder="+1234567890">
+                    </div>
+                    <div class="form-group">
+                        <label>Role:</label>
+                        <select id="role">
+                            <option value="student">Student</option>
+                            <option value="instructor">Instructor</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" onclick="sendOtp()" id="sendOtpBtn">Send OTP</button>
+                    
+                    <div id="otpSection" style="display: none;">
+                        <div class="form-group">
+                            <label>Enter OTP:</label>
+                            <input type="text" id="otp" placeholder="123456" maxlength="6">
+                        </div>
+                        <button class="btn btn-primary" onclick="verifyOtp()">Verify OTP</button>
+                    </div>
+                </div>
+                
+                <!-- Google Login -->
+                <div id="googleLogin" style="display: none;">
+                    <div id="g_id_onload"
+                         data-client_id="YOUR_GOOGLE_CLIENT_ID"
+                         data-callback="handleCredentialResponse">
+                    </div>
+                    <div class="g_id_signin" data-type="standard"></div>
+                    <p><small>Note: Google login defaults to student role</small></p>
+                </div>
+            </div>
+
+            <!-- Main Panel (hidden initially) -->
+            <div id="mainPanel" style="display: none;">
+                <div class="read-only-notice">
+                    <strong>Note:</strong> As a student, you can read messages and leave groups, but cannot add other students.
+                </div>
+                
+                <div class="form-group">
+                    <label>User ID:</label>
+                    <input type="text" id="userId" placeholder="Enter your user ID">
+                </div>
+                <div class="form-group">
+                    <label>Name:</label>
+                    <input type="text" id="userName" placeholder="Enter your name">
+                </div>
+                <button class="btn btn-primary" onclick="authenticate()">Connect to Chat</button>
+                
+                <hr>
+                
+                <!-- Groups List -->
+                <h4>My Groups</h4>
+                <button class="btn btn-secondary" onclick="loadGroups()">Load Groups</button>
+                <div id="groupsList" class="group-list"></div>
+            </div>
+
+            <div id="status"></div>
+        </div>
+
+        <div class="chat-area">
+            <div class="chat-header">
+                <h3 id="chatTitle">Select a group to start reading messages</h3>
+            </div>
+            <div id="messages" class="messages"></div>
+            <div id="typingStatus"></div>
+            <div class="input-area" style="padding: 10px; text-align: center; background: #f8f9fa; border-top: 1px solid #eee;">
+                <p style="margin: 0; color: #666; font-style: italic;">Students can read messages but cannot send messages</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let socket;
+        let currentUser = null;
+        let currentGroup = null;
+        let authToken = null;
+
+        // Check for existing session on page load
+        window.addEventListener('load', () => {
+            checkExistingSession();
+        });
+
+        function checkExistingSession() {
+            const savedToken = localStorage.getItem('authToken');
+            const savedUser = localStorage.getItem('currentUser');
+            
+            if (savedToken && savedUser) {
+                try {
+                    authToken = savedToken;
+                    currentUser = JSON.parse(savedUser);
+                    
+                    // Restore UI state
+                    document.getElementById('userId').value = currentUser._id;
+                    document.getElementById('userName').value = currentUser.name;
+                    document.getElementById('loginSection').style.display = 'none';
+                    document.getElementById('mainPanel').style.display = 'block';
+                    
+                    showStatus('Session restored!', 'success');
+                    
+                    // Auto-connect to chat
+                    setTimeout(() => {
+                        authenticate();
+                    }, 500);
+                } catch (error) {
+                    console.error('Error restoring session:', error);
+                    clearSession();
+                }
+            }
+        }
+
+        function saveSession() {
+            if (authToken && currentUser) {
+                localStorage.setItem('authToken', authToken);
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            }
+        }
+
+        function clearSession() {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('currentUser');
+            authToken = null;
+            currentUser = null;
+        }
+
+        function toggleLoginMethod() {
+            const method = document.getElementById('loginMethod').value;
+            const phoneLogin = document.getElementById('phoneLogin');
+            const googleLogin = document.getElementById('googleLogin');
+            
+            if (method === 'phone') {
+                phoneLogin.style.display = 'block';
+                googleLogin.style.display = 'none';
+            } else {
+                phoneLogin.style.display = 'none';
+                googleLogin.style.display = 'block';
+            }
+        }
+
+        async function sendOtp() {
+            const phoneNumber = document.getElementById('phoneNumber').value;
+            
+            if (!phoneNumber) {
+                showStatus('Please enter phone number', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/auth/send-otp', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ phoneNumber,role:'student' })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('otpSection').style.display = 'block';
+                    document.getElementById('sendOtpBtn').disabled = true;
+                    showStatus('OTP sent successfully!', 'success');
+                    
+                    // Re-enable send button after 2 minutes
+                    setTimeout(() => {
+                        document.getElementById('sendOtpBtn').disabled = false;
+                    }, 120000);
+                } else {
+                    showStatus('Failed to send OTP: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showStatus('Error sending OTP: ' + error.message, 'error');
+            }
+        }
+
+        async function verifyOtp() {
+            const phoneNumber = document.getElementById('phoneNumber').value;
+            const otp = document.getElementById('otp').value;
+            const role = document.getElementById('role').value;
+            
+            if (!phoneNumber || !otp || !role) {
+                showStatus('Please fill all fields', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/auth/verify-otp', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ phoneNumber, otp })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    authToken = data.data.accessToken;
+                    currentUser = data.data.user;
+                    document.getElementById('userId').value = data.data.user._id;
+                    document.getElementById('userName').value = data.data.user.name;
+                    document.getElementById('loginSection').style.display = 'none';
+                    document.getElementById('mainPanel').style.display = 'block';
+                    showStatus('Login successful!', 'success');
+                    
+                    // Save session
+                    saveSession();
+                    
+                    // Auto-connect to chat after successful login
+                    setTimeout(() => {
+                        authenticate();
+                    }, 500);
+                } else {
+                    showStatus('Login failed: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showStatus('Login error: ' + error.message, 'error');
+            }
+        }
+
+        // Google Sign-In callback
+        function handleCredentialResponse(response) {
+            googleLogin(response.credential);
+        }
+
+        async function googleLogin(idToken) {
+            try {
+                const response = await fetch('/api/auth/google-login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ idToken })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    authToken = data.data.accessToken;
+                    currentUser = data.data.user;
+                    document.getElementById('userId').value = data.data.user._id;
+                    document.getElementById('userName').value = data.data.user.name;
+                    document.getElementById('loginSection').style.display = 'none';
+                    document.getElementById('mainPanel').style.display = 'block';
+                    showStatus('Google login successful!', 'success');
+                    
+                    // Save session
+                    saveSession();
+                    
+                    // Auto-connect to chat after successful login
+                    setTimeout(() => {
+                        authenticate();
+                    }, 500);
+                } else {
+                    showStatus('Google login failed: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showStatus('Google login error: ' + error.message, 'error');
+            }
+        }
+
+        function authenticate() {
+            const userId = document.getElementById('userId').value;
+            const userName = document.getElementById('userName').value;
+            
+            if (!userId || !userName) {
+                showStatus('Please enter both User ID and Name', 'error');
+                return;
+            }
+
+            // Initialize socket connection
+            socket = io();
+            
+            socket.on('connect', () => {
+                console.log('Connected to server');
+                socket.emit('authenticate', {
+                    userId: userId,
+                    name: userName
+                });
+                showStatus('Connected to chat server!', 'success');
+            });
+
+            socket.on('newMessage', (message) => {
+                console.log('Received new message:', message);
+                displayMessage(message);
+            });
+
+            socket.on('typingStatus', (data) => {
+                if(data.isTyping){
+                    showTypingStatus(data);
+                } else {
+                    hideTypingStatus();
+                }
+            });
+
+            socket.on('userJoined', (data) => {
+                if (data.name) {
+                    showStatus(`${data.name} joined the group`, 'success');
+                }
+            });
+
+            socket.on('userLeft', (data) => {
+                if (data.name) {
+                    showStatus(`${data.name} left the group`, 'success');
+                }
+            });
+
+            socket.on('messageError', (error) => {
+                showStatus('Message error: ' + error.error, 'error');
+            });
+
+            socket.on('disconnect', () => {
+                showStatus('Disconnected from chat server', 'error');
+            });
+
+            socket.on('reconnect', () => {
+                showStatus('Reconnected to chat server', 'success');
+            });
+        }
+
+        function showTypingStatus(data) {
+            const typingStatusDiv = document.getElementById('typingStatus');
+            typingStatusDiv.innerHTML = `${data.name} is typing...`;
+        }
+
+        function hideTypingStatus() {
+            const typingStatusDiv = document.getElementById('typingStatus');
+            typingStatusDiv.innerHTML = '';
+        }
+
+        async function loadGroups() {
+            if (!authToken) {
+                showStatus('Please login first', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/groups/my-groups', {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    displayGroups(data.groups);
+                } else {
+                    showStatus('Failed to load groups: ' + data.error, 'error');
+                }
+            } catch (error) {
+                showStatus('Error loading groups: ' + error.message, 'error');
+            }
+        }
+
+        function displayGroups(groups) {
+            const groupsList = document.getElementById('groupsList');
+            groupsList.innerHTML = '';
+            
+            groups.forEach(group => {
+                const groupDiv = document.createElement('div');
+                groupDiv.className = 'group-item';
+                groupDiv.innerHTML = `
+                    <strong>${group.name}</strong><br>
+                    <small>${group.description}</small>
+                    <button class="btn btn-danger leave-btn" onclick="leaveGroup('${group._id}', event)">Leave</button>
+                `;
+                groupDiv.onclick = (e) => {
+                    if (!e.target.classList.contains('leave-btn')) {
+                        selectGroup(group);
+                    }
+                };
+                groupsList.appendChild(groupDiv);
+            });
+        }
+
+        function selectGroup(group) {
+            // Remove active class from all groups
+            document.querySelectorAll('.group-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // Add active class to selected group
+            event.target.classList.add('active');
+            
+            currentGroup = group;
+            document.getElementById('chatTitle').textContent = `${group.name} - Student Chat`;
+            
+            // Join the group room
+            if (socket && socket.connected) {
+                console.log('Joining group:', group._id);
+                socket.emit('joinGroup', group._id);
+            } else {
+                console.log('Socket not connected, cannot join group');
+                showStatus('Chat not connected. Please wait...', 'error');
+            }
+            
+            // Load messages for this group
+            loadMessages(group._id);
+        }
+
+        async function loadMessages(groupId) {
+            if (!authToken) return;
+
+            try {
+                const response = await fetch(`/api/groups/${groupId}/messages`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    const messagesDiv = document.getElementById('messages');
+                    messagesDiv.innerHTML = '';
+                    data.data.messages.forEach(message => {
+                        displayMessage(message);
+                    });
+                } else {
+                    showStatus('Failed to load messages: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showStatus('Error loading messages: ' + error.message, 'error');
+            }
+        }
+
+        function formatMessageContent(content) {
+            const urlRegex = /(https?:\/\/[^\s]+)/g;
+            return content.replace(urlRegex, (url) => {
+                return `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`;
+            });
+        }
+
+        function displayMessage(message) {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message';
+            
+            // Handle different message formats (from API vs Socket)
+            let senderId, senderName, createdAt;
+            
+            if (message.senderId && typeof message.senderId === 'object') {
+                // From API - populated object
+                senderId = message.senderId._id;
+                senderName = message.senderId.name;
+            } else {
+                // From Socket - direct values
+                senderId = message.senderId;
+                senderName = message.senderName;
+            }
+            
+            createdAt = message.createdAt || new Date().toISOString();
+            
+            // Check if it's our own message
+            if (currentUser && senderId === currentUser._id) {
+                messageDiv.classList.add('own');
+            }
+            
+            const time = new Date(createdAt).toLocaleTimeString();
+            
+            // Add media class if it's a media message
+            if (message.messageType !== 'text' && message.media) {
+                messageDiv.classList.add('media');
+            }
+            
+            let messageContent = `
+                <div class="message-header">
+                    ${senderName}
+                    <span class="message-time">${time}</span>
+                    ${message.isEdited ? '<span style="color: #666;">(edited)</span>' : ''}
+                </div>
+                <div>${formatMessageContent(message.content)}</div>
+            `;
+            
+            // Add media content if present
+            if (message.media && message.media.url) {
+                messageContent += `<div class="media-content">${renderMediaContent(message.media, message.messageType)}</div>`;
+            }
+            
+            messageDiv.innerHTML = messageContent;
+            
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+            markMessageAsRead(message._id, currentGroup._id, currentUser._id);
+        }
+
+        // Students cannot send messages - function removed
+
+        async function leaveGroup(groupId, event) {
+            event.stopPropagation();
+            
+            if (!authToken) {
+                showStatus('Please login first', 'error');
+                return;
+            }
+
+            if (confirm('Are you sure you want to leave this group?')) {
+                try {
+                    const response = await fetch(`/api/groups/${groupId}/leave`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${authToken}`
+                        }
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        showStatus('Left group successfully!', 'success');
+                        loadGroups(); // Refresh the groups list
+                        
+                        // If this was the current group, clear the chat
+                        if (currentGroup && currentGroup._id === groupId) {
+                            currentGroup = null;
+                            document.getElementById('chatTitle').textContent = 'Select a group to start reading messages';
+                            document.getElementById('messages').innerHTML = '';
+                        }
+                    } else {
+                        showStatus('Failed to leave group: ' + data.error, 'error');
+                    }
+                } catch (error) {
+                    showStatus('Error leaving group: ' + error.message, 'error');
+                }
+            }
+        }
+
+        // Students cannot send messages - function removed
+
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+            setTimeout(() => {
+                statusDiv.innerHTML = '';
+            }, 5000);
+        }
+
+        function markMessageAsRead(messageId, groupId, userId) {
+          socket.emit("messageRead", {
+            messageId: messageId,
+            userId: userId,
+            groupId: groupId,
+          });
+        }
+
+        function renderMediaContent(media, messageType) {
+            const fileSize = formatFileSize(media.size);
+            
+            switch (messageType) {
+                case 'image':
+                    return `<img src="${media.url}" alt="${media.filename}" onclick="window.open('${media.url}', '_blank')" />`;
+                
+                case 'video':
+                    return `<video controls>
+                              <source src="${media.url}" type="${media.mimetype}">
+                              Your browser does not support the video tag.
+                            </video>`;
+                
+                case 'audio':
+                    return `<audio controls>
+                              <source src="${media.url}" type="${media.mimetype}">
+                              Your browser does not support the audio tag.
+                            </audio>`;
+                
+                case 'document':
+                default:
+                    const icon = getFileIcon(media.mimetype);
+                    return `<div class="file-info">
+                              <div class="file-icon">${icon}</div>
+                              <div class="file-details">
+                                <div class="file-name">${media.filename}</div>
+                                <div class="file-size">${fileSize}</div>
+                              </div>
+                              <a href="${media.url}" download="${media.filename}" class="download-btn">Download</a>
+                            </div>`;
+            }
+        }
+
+        function getFileIcon(mimeType) {
+            if (mimeType.startsWith('image/')) return '🖼️';
+            if (mimeType.startsWith('video/')) return '🎥';
+            if (mimeType.startsWith('audio/')) return '🎵';
+            if (mimeType.includes('pdf')) return '📄';
+            if (mimeType.includes('word') || mimeType.includes('document')) return '📝';
+            if (mimeType.includes('zip') || mimeType.includes('compressed')) return '📦';
+            return '📎';
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+    </script>
+</body>
+</html>
