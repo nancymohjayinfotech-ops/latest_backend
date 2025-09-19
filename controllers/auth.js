@@ -6,6 +6,8 @@ const crypto = require('crypto');
 
 const client = new OAuth2Client();
 
+require('dotenv').config();
+
 const GOOGLE_CLIENT_IDS = [
   process.env.GOOGLE_WEB_CLIENT_ID,
   process.env.GOOGLE_ANDROID_CLIENT_ID
