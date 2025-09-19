@@ -32,13 +32,13 @@ function initializeSocket(io) {
     console.log('New client connected', socket.id);
     
     // Store user data when they authenticate
-    // socket.on('authenticate', (userData) => {
-    //   if (userData && userData.userId) {
-    //     // Store user data in socket for later use
-    //     socket.userData = userData;
-    //     console.log(`User authenticated: ${userData.userId} (${userData.name})`);
-    //   }
-    // });
+    socket.on('authenticate', (userData) => {
+      if (userData && userData.userId) {
+        // Store user data in socket for later use
+        socket.userData = userData;
+        console.log(`User authenticated: ${userData.userId} (${userData.name})`);
+      }
+    });
     
     // Join a group chat room
     // socket.on('joinGroup', (groupId) => {

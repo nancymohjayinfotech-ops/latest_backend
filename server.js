@@ -52,7 +52,7 @@ const adminRoutes = require('./routes/admin');
 const notificationRoutes = require('./routes/notifications');
 const deviceTokenRoutes = require('./routes/deviceTokens');
 const chatMediaRoutes = require('./routes/chatMedia');
-const {seedData} = require('./seedData');
+// const {seedData} = require('./seedData');
 const studentRoutes = require('./routes/student');
 
 app.use('/api/auth', mongoAuthRoutes);
@@ -86,9 +86,9 @@ app.get('/', (req, res) => {
 //   seedData();
 //   return res.status(200).json({"status":'done'});
 // })
-app.get('/test/chat', (req, res) => {
-  res.render('chat-test');
-});
+// app.get('/test/chat', (req, res) => {
+//   res.render('chat-test');
+// });
 
 const initializeSocket = require('./socket/socketHandler');
 
