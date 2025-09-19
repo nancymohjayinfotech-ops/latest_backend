@@ -70,7 +70,7 @@ function initializeSocket(io) {
         // Handle new message from socket
         socket.on('sendMessage', async(data) => {
             console.log(`📥 sendMessage event from ${socket.id}:`, data);
-            console.log("iuserdata recived",userData)
+            // console.log("iuserdata recived",userData)
             try {
                 if (!socket.userData || !socket.userData.userId) {
                     console.warn(`❌ Message rejected (unauthenticated user) from socket ${socket.id}`);
