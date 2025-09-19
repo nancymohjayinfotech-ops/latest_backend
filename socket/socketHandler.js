@@ -1,11 +1,13 @@
 const messageController = require('../controllers/Message');
 const { getEncryptionInstance } = require('../utils/encryption');
 const Message = require('../models/Message');
+const jwt = require('jsonwebtoken');
 
 function initializeSocket(io) {
 
   //  io.use((socket, next) => {
   //   try {
+  //     console.log('Socket auth attempt:', socket.handshake.headers);
   //     const authHeader = socket.handshake.headers['authorization'];
   //     if (!authHeader || !authHeader.startsWith("Bearer ")) {
   //       return next(new Error("Authentication error: Missing or invalid token"));
@@ -29,14 +31,14 @@ function initializeSocket(io) {
 
   
   io.on('connection', (socket) => {
-    console.log('New client connected', socket.id);
-    
     // Store user data when they authenticate
     socket.on('authenticate', (userData) => {
-      if (userData && userData.userId) {
+      const decoded = jwt.verify(userData.token, process.env.JWT_SECRET);
+      if (decoded && decoded.id) {
         // Store user data in socket for later use
-        socket.userData = userData;
-        console.log(`User authenticated: ${userData.userId} (${userData.name})`);
+        socket.userData = {
+          userId: decoded.id,
+        };
       }
     });
     
@@ -75,7 +77,7 @@ function initializeSocket(io) {
           if (socket.userData) {
               socket.to(groupId).emit('userJoined', {
                   userId: socket.userData.userId,
-                  name: socket.userData.name,
+                  name: data.senderName,
                   groupId,
                   timestamp: new Date()
               });
@@ -97,7 +99,7 @@ function initializeSocket(io) {
       if (socket.userData) {
         socket.to(groupId).emit('userLeft', { 
           userId: socket.userData.userId,
-          name: socket.userData.name,
+          name: data.senderName,
           groupId: groupId,
           timestamp: new Date()
         });
@@ -115,12 +117,11 @@ function initializeSocket(io) {
           });
           return;
         }
-        
         // Create message in database using authenticated user data
         const messageData = {
           groupId: data.groupId,
           senderId: socket.userData.userId,
-          senderName: socket.userData.name,
+          senderName: data.senderName,
           content: data.content,
           messageType: data.messageType || 'text',
           media: data.media || null
@@ -146,7 +147,7 @@ function initializeSocket(io) {
       // Broadcast to everyone except sender
       socket.to(data.groupId).emit('typingStatus', {
         userId: data.userId,
-        name: data.name,
+        name: data.senderName,
         groupId: data.groupId,
         isTyping: data.isTyping
       });

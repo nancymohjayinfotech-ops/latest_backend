@@ -613,8 +613,7 @@
         socket.on("connect", () => {
           console.log("Connected to server");
           socket.emit("authenticate", {
-            userId: userId,
-            name: userName,
+            token:authToken
           });
           showStatus("Connected to chat server!", "success");
         });
@@ -719,7 +718,7 @@
 
         // Join the group room
         if (socket) {
-          socket.emit("joinGroup", group._id);
+          socket.emit("joinGroup", {groupId: group._id});
         }
 
         // Load messages for this group
@@ -741,7 +740,7 @@
           if (response.ok) {
             const messagesDiv = document.getElementById("messages");
             messagesDiv.innerHTML = "";
-            data.data.messages.forEach((message) => {
+            data.data.messages.items.forEach((message) => {
               displayMessage(message);
             });
           } else {
