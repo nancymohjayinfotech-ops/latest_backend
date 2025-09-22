@@ -306,7 +306,7 @@ const cleanupInactiveTokens = async (req, res) => {
 const testPushNotification = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { deviceId, title, message,action } = req.body;
+    const { deviceId, title, message } = req.body;
 
     if (!deviceId || !title || !message) {
       return res.status(400).json({
@@ -323,29 +323,20 @@ const testPushNotification = async (req, res) => {
       });
     }
 
-    const { sendPushNotification,sendPushNotificationV2 } = require('../services/firebaseService');
+    const { sendPushNotification } = require('../services/firebaseService');
+    
+    const result = await sendPushNotification(deviceId, {
+      title,
+      message,
+      priority: 'high'
+    }, {
+      type: 'test',
+      userId: userId.toString()
+    });
 
-    if(action == 'v2'){
-      const result = await sendPushNotificationV2(deviceId, {
-        title,
-        message,
-        priority: 'high'
-      }, {
-        type: 'test',
-        userId: userId.toString()
-      });
-    }
-    else if(action == 'v1'){
-      const result = await sendPushNotification(deviceId, {
-        title,
-        message,
-        priority: 'high'
-      }, {
-        type: 'test',
-        userId: userId.toString()
-      });
-    }
     console.log(result);
+    
+
     if (result.success) {
       res.status(200).json({
         success: true,
