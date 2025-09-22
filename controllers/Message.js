@@ -107,8 +107,9 @@ exports.getMessagesByGroupId = async(req, res) => {
         const isAdmin = group.admin.toString() === userId.toString();
         const isInstructor = group.instructors.some(id => id.toString() === userId.toString());
         const isStudent = group.students.some(id => id.toString() === userId.toString());
+        const isEvent = group.events.some(id => id.toString() === userId.toString());
 
-        if (!isAdmin && !isInstructor && !isStudent) {
+        if (!isAdmin && !isInstructor && !isStudent && !isEvent) {
             return res.status(403).json({
                 success: false,
                 message: 'Not authorized to access this group\'s messages'
