@@ -3,7 +3,6 @@ const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
-require('dotenv').config();
 
 const { sendNotification } = require('../services/notificationService');
 
@@ -47,6 +46,7 @@ const sendSms = async (phone, otp) => {
 // Signup with phone number and role
 exports.signupWithPhone = async (req, res) => {
   try {
+    console.log("--- 1. Signup request received ---");
     const { phoneNumber, role } = req.body;
 
     if (!phoneNumber) {
@@ -101,14 +101,19 @@ exports.signupWithPhone = async (req, res) => {
     });
 
     await user.save();
+    console.log(`--- 2. New user ${user.name} saved successfully ---`);
 
     try {
+      console.log("--- 3. Starting notification logic ---");
       if (user.role === 'student' || user.role === 'instructor') {
-          const admins = await User.find({ role: 'admin' }).select('_id');
-          const instructors = await User.find({ role: 'instructor' }).select('_id');
+        const admins = await User.find({ role: 'admin' }).select('_id');
+        console.log(`--- 4. Found ${admins.length} admin(s) ---`);
+        const instructors = await User.find({ role: 'instructor' }).select('_id');
+        console.log(`--- 5. Found ${instructors.length} instructor(s) ---`);
 
           // 1. Notify Admins
-          if (admins.length > 0) {
+        if (admins.length > 0) {
+          console.log("--- 6. Preparing to send notification to admins... ---");
               await sendNotification({
                   recipients: admins.map(a => a._id),
                   sender: user._id,
@@ -117,10 +122,12 @@ exports.signupWithPhone = async (req, res) => {
                   message: `A new ${user.role}, ${user.name}, has just signed up with a phone number.`,
                   data: { userId: user._id.toString() }
               });
+              console.log("--- 7. Notification sent to admins ---");
           }
 
           // 2. Notify Instructors (if new user is a student)
-          if (user.role === 'student' && instructors.length > 0) {
+        if (user.role === 'student' && instructors.length > 0) {
+          console.log("--- 8. Preparing to send notification to instructors... ---");
               await sendNotification({
                   recipients: instructors.map(i => i._id),
                   sender: user._id,
@@ -129,9 +136,11 @@ exports.signupWithPhone = async (req, res) => {
                   message: `A new student, ${user.name}, has joined MiSkills.`,
                   data: { userId: user._id.toString() }
               });
+              console.log("--- 9. Notification sent to instructors ---");
           }
 
           // 3. Send Welcome Notification to the new user
+          console.log("--- 10. Preparing to send welcome notification to the new user... ---");
           await sendNotification({
               recipients: [user._id],
               sender: null,
@@ -139,10 +148,11 @@ exports.signupWithPhone = async (req, res) => {
               title: 'Welcome to MiSkills!',
               message: `Hi ${user.name}, welcome! Your account has been created. Let's start your Journey`,
           });
+          console.log("--- 11. Welcome notification sent ---");
       }
-  } catch (notificationError) {
-      console.error('Error sending signup notifications:', notificationError);
-  }
+    } catch (notificationError) {
+      console.error('--- !!! NOTIFICATION LOGIC FAILED !!! ---:', notificationError);
+    }
 
     res.status(201).json({
       success: true,
@@ -155,7 +165,7 @@ exports.signupWithPhone = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Signup error:', error);
+    console.error('--- !!! SIGNUP FAILED CRITICALLY !!! ---:', error);
     res.status(500).json({
       success: false,
       message: 'Error during signup',
@@ -255,11 +265,9 @@ exports.sendOtp = async (req, res) => {
 // Verify OTP and login
 exports.verifyOtp = async (req, res) => {
   try {
-    console.log("--- 1. Received a request to /otp/verify ---");
     const { phoneNumber, otp } = req.body;
 
     if (!phoneNumber || !otp) {
-      console.log("--- FAILED: Phone number or OTP missing. ---");
       return res.status(400).json({
         success: false,
         message: 'Phone number and OTP are required'
@@ -272,17 +280,14 @@ exports.verifyOtp = async (req, res) => {
     // Find user
     const user = await User.findOne({ phoneNumber: cleanPhone });
     if (!user) {
-      console.log(`--- FAILED: User with phone ${cleanPhone} not found. ---`);
       return res.status(404).json({
         success: false,
         message: 'User not found'
       });
     }
-    console.log(`--- 2. Found user: ${user.name} (${user.role}) ---`);
 
     // Check if OTP exists and is not expired
     if (!user.otpHash || !user.otpExpiry || new Date() > user.otpExpiry) {
-      console.log(`--- FAILED: OTP for user ${user.name} is expired or does not exist. ---`);
       return res.status(400).json({
         success: false,
         message: 'OTP expired or not found'
@@ -292,17 +297,14 @@ exports.verifyOtp = async (req, res) => {
     // Verify OTP
     const isMatch = await bcrypt.compare(otp, user.otpHash);
     if (!isMatch) {
-      console.log(`--- FAILED: Invalid OTP for user ${user.name}. ---`);
       return res.status(400).json({
         success: false,
         message: 'Invalid OTP'
       });
     }
-    console.log(`--- 3. OTP verified successfully for ${user.name}. ---`);
 
     // ✅ CORRECTED: Notification is sent AFTER user is found and OTP is verified.
     try {
-      console.log("--- 4. Attempting to send 'Welcome Back' notification... ---");
       await sendNotification({
           recipients: [user._id],
           sender: null,
@@ -311,9 +313,7 @@ exports.verifyOtp = async (req, res) => {
           message: "It's great to see you again. Let's get started!",
           data: { userId: user._id.toString() }
       });
-      console.log("--- 5. Notification sent successfully. ---");
     } catch (e) {
-      console.error("--- FAILED: Error sending login notification:", e);
         console.error("Error sending login notification:", e);
     }
 
@@ -336,8 +336,39 @@ exports.verifyOtp = async (req, res) => {
     
     await user.save();
 
-    // ... (rest of your profileStatus logic is unchanged)
-    
+    // Check profile completeness for instructor/event/student users
+    let profileStatus = {};
+    if (['instructor', 'event', 'student'].includes(user.role)) {
+      if (user.role === 'student') {
+        const requiredFields = ['college', 'state', 'city', 'dob'];
+        let missingFields = requiredFields.filter(field => !user[field] || user[field].trim() === '');
+        if (user.googleId && (!user.phoneNumber || user.phoneNumber.trim() === '')) {
+          missingFields.push('phoneNumber');
+        }
+        if (user.phoneNumber && !user.googleId && (!user.email || user.email.trim() === '')) {
+          missingFields.push('email');
+        }
+        profileStatus = {
+          isProfileComplete: missingFields.length === 0,
+          isCollegeSet: !!(user.college && user.studentId)
+        };
+      } else {
+        const requiredFields = ['name', 'bio', 'dob', 'address', 'state', 'city'];
+        let missingFields = requiredFields.filter(field => !user[field] || user[field].trim() === '');
+        if (user.googleId && (!user.phoneNumber || user.phoneNumber.trim() === '')) {
+          missingFields.push('phoneNumber');
+        }
+        if (user.phoneNumber && !user.googleId && (!user.email || user.email.trim() === '')) {
+          missingFields.push('email');
+        }
+        profileStatus = {
+          isProfileComplete: missingFields.length === 0,
+          isVerified: user.isVerified,
+          verificationRequested: user.verificationRequested || false
+        };
+      }
+    }
+
     res.status(200).json({
       success: true,
       message: 'Login successful',
@@ -345,11 +376,10 @@ exports.verifyOtp = async (req, res) => {
         accessToken,
         refreshToken,
         user,
-        // ...
+        ...((['instructor', 'event', 'student'].includes(user.role)) && { profileStatus })
       }
     });
   } catch (error) {
-    console.error('--- FAILED: A critical error occurred in verifyOtp:', error);
     console.error('Verify OTP error:', error);
     res.status(500).json({
       success: false,
@@ -362,17 +392,13 @@ exports.verifyOtp = async (req, res) => {
 exports.adminLogin = async (req, res) => {
   try {
       const { email, password } = req.body;
-
       if (!email || !password) {
           return res.status(400).json({ success: false, message: 'Email and password are required.' });
       }
-
       const user = await User.findOne({ email, role: 'admin' });
       if (!user) {
           return res.status(401).json({ success: false, message: 'Invalid credentials or not an admin.' });
       }
-
-      // You must have a password field in your User model for this to work
       const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch) {
           return res.status(401).json({ success: false, message: 'Invalid credentials.' });
@@ -391,91 +417,70 @@ exports.adminLogin = async (req, res) => {
           console.error("Error sending admin login notification:", e);
       }
 
-      // Generate tokens and send response
       const sessionToken = generateSessionToken();
       const accessToken = generateAccessToken(user._id, sessionToken);
-      // ... (update user session, etc.) ...
       
       res.status(200).json({
           success: true,
           message: 'Admin login successful',
-          data: { accessToken /*, refreshToken, user */ }
+          data: { accessToken }
       });
-
   } catch (error) {
       console.error('Admin login error:', error);
       res.status(500).json({ success: false, message: 'Server error' });
   }
 };
 
-
 // Google OAuth login
 exports.googleLogin = async (req, res) => {
   const { idToken,role } = req.body;
   try {
-    // Check if idToken exists
     if (!idToken) {
-      return res.status(400).json({
-        success: false,
-        message: 'No ID token provided',
-      });
+      return res.status(400).json({ success: false, message: 'No ID token provided' });
     }
-
     const ticket = await client.verifyIdToken({
       idToken,
       audience: GOOGLE_CLIENT_IDS,
     });
-
     const payload = ticket.getPayload();
     const { email, name, picture, sub } = payload;
 
-    // Find user by email
     let user = await User.findOne({ email });
 
     if (user) {
-      // Check if user was registered with phone/OTP (has phoneNumber but no googleId)
       if (user.phoneNumber && !user.googleId) {
         return res.status(400).json({
           success: false,
-          message: 'This email is already registered with phone number. Please use OTP login instead.',
+          message: 'This email is already registered with a phone number. Please use OTP login instead.',
           loginMethod: 'otp',
-          phoneNumber: user.phoneNumber.replace(/(\d{3})\d{4}(\d{3})/, '$1****$2') // Masked phone number
+          phoneNumber: user.phoneNumber.replace(/(\d{3})\d{4}(\d{3})/, '$1****$2')
         });
       }
-      
-      // If user exists with Google ID, proceed with login
       if (!user.googleId) {
-        // Update existing user with Google ID for future logins
         user.googleId = sub;
         user.avatar = picture;
       }
     } else {
-      // Create new user
       user = new User({
         name,
         email,
         googleId: sub,
         avatar: picture,
-        role: role || 'student', // Default to student if no role provided
-        isVerified: !['event', 'instructor'].includes(role || 'student') // Auto-verify students and admins
+        role: role || 'student',
+        isVerified: !['event', 'instructor'].includes(role || 'student')
       });
     }
 
-    // Generate session token first
     const sessionToken = generateSessionToken();
-    // Generate tokens with session reference
     const accessToken = generateAccessToken(user._id, sessionToken);
     const refreshToken = generateRefreshToken(user._id);
     
-    // Calculate refresh token expiry (7 days from now)
     const refreshTokenExpiry = new Date();
     refreshTokenExpiry.setDate(refreshTokenExpiry.getDate() + 7);
     
-    // Update session (single device login)
     user.sessionToken = sessionToken;
     user.refreshToken = refreshToken;
     user.refreshTokenExpiry = refreshTokenExpiry;
-    
     await user.save();
 
     res.status(200).json({
@@ -506,14 +511,9 @@ exports.googleLogin = async (req, res) => {
 exports.getMe = async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
-    
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found',
-      });
+      return res.status(404).json({ success: false, message: 'User not found' });
     }
-    
     res.status(200).json({
       success: true,
       data: {
@@ -544,14 +544,11 @@ exports.getMe = async (req, res) => {
 exports.logout = async (req, res) => {
   try {
     const userId = req.user.id;
-    
-    // Clear session token and refresh token
     await User.findByIdAndUpdate(userId, {
       sessionToken: null,
       refreshToken: null,
       refreshTokenExpiry: null
     });
-
     res.status(200).json({
       success: true,
       message: 'Logged out successfully'
@@ -570,16 +567,10 @@ exports.logout = async (req, res) => {
 exports.registerAdmin = async (req, res) => {
   try {
     const { name, email, phoneNumber, role = 'admin' } = req.body;
-
-    // Validate required fields
     if (!name || (!email && !phoneNumber)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please provide name and either email or phone number'
-      });
+      return res.status(400).json({ success: false, message: 'Please provide name and either email or phone number' });
     }
 
-    // Check if user already exists
     let existingUser = null;
     if (email) {
       existingUser = await User.findOne({ email });
@@ -589,13 +580,9 @@ exports.registerAdmin = async (req, res) => {
     }
 
     if (existingUser) {
-      return res.status(400).json({
-        success: false,
-        message: 'User already exists with that email or phone number'
-      });
+      return res.status(400).json({ success: false, message: 'User already exists with that email or phone number' });
     }
 
-    // Create admin user
     const user = new User({
       name,
       email,
@@ -604,7 +591,6 @@ exports.registerAdmin = async (req, res) => {
     });
 
     await user.save();
-
     res.status(201).json({
       success: true,
       message: 'Admin registered successfully',
@@ -630,39 +616,23 @@ exports.registerAdmin = async (req, res) => {
 exports.refreshToken = async (req, res) => {
   try {
     const { refreshToken } = req.body;
-    
     if (!refreshToken) {
-      return res.status(400).json({
-        success: false,
-        message: 'Refresh token is required',
-      });
+      return res.status(400).json({ success: false, message: 'Refresh token is required' });
     }
     
-    // Verify the refresh token
     let decoded;
     try {
       decoded = jwt.verify(refreshToken, process.env.JWT_SECRET);
     } catch (error) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid or expired refresh token',
-      });
+      return res.status(401).json({ success: false, message: 'Invalid or expired refresh token' });
     }
     
-    // Find user with this refresh token and check if it's still valid
     const user = await User.findById(decoded.id);
-    
-    if (!user || user.refreshToken !== refreshToken || 
-        new Date(user.refreshTokenExpiry) < new Date()) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid refresh token or token expired',
-      });
+    if (!user || user.refreshToken !== refreshToken || new Date(user.refreshTokenExpiry) < new Date()) {
+      return res.status(401).json({ success: false, message: 'Invalid refresh token or token expired' });
     }
     
-    // Generate new access token with current session token
     const accessToken = generateAccessToken(user._id, user.sessionToken);
-    
     res.status(200).json({
       success: true,
       message: 'Token refreshed successfully',
@@ -679,3 +649,14 @@ exports.refreshToken = async (req, res) => {
   }
 };
 
+// module.exports = {
+//     signupWithPhone,
+//     sendOtp,
+//     verifyOtp,
+//     adminLogin,
+//     googleLogin,
+//     getMe,
+//     logout,
+//     registerAdmin,
+//     refreshToken,
+// };
