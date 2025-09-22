@@ -29,7 +29,7 @@ router.patch('/mark-all-read', protect, authorize('student', 'instructor', 'even
 router.delete('/:notificationId', protect, authorize('student', 'instructor', 'event','admin'), deleteNotification);
 
 // Admin routes
-router.post('/create', protect, authorize('admin', 'instructor', 'event'), createNotification);
+// router.post('/create', protect, authorize('admin', 'instructor', 'event'), createNotification);
 router.get('/stats', protect, authorize('admin', 'instructor', 'event'), getNotificationStats);
 router.post('/create', protect, authorize('admin', 'instructor', 'event'), createNotification);
 

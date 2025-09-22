@@ -120,12 +120,6 @@ const createOrder = async (req, res) => {
     });
   }
 };
-
-/**
- * Verify payment and enroll student in course
- * @route POST /api/payments/verify
- * @access Private (Student)
- */
 const verifyPayment = async (req, res) => {
   try {
     const { 
