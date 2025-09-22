@@ -31,5 +31,6 @@ router.delete('/:notificationId', protect, authorize('student', 'instructor', 'e
 // Admin routes
 router.post('/create', protect, authorize('admin', 'instructor', 'event'), createNotification);
 router.get('/stats', protect, authorize('admin', 'instructor', 'event'), getNotificationStats);
+router.post('/create', protect, authorize('admin', 'instructor', 'event'), createNotification);
 
 module.exports = router;
