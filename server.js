@@ -57,10 +57,10 @@ const studentRoutes = require('./routes/student');
 // const userRoutes = require('./routes/users');
 const userRoutes = require('./routes/users');
 
-app.use('/api/users', userRoutes);
+// app.use('/api/user', userRoutes);
 app.use('/api/auth', mongoAuthRoutes);
 app.use('/api/courses', courseRoutes);
-// app.use('/api/user', userRoutes);
+app.use('/api/user', userRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/subcategories', subcategoryRoutes);
 app.use('/api/content', contentRoutes);
