@@ -11,16 +11,15 @@ connectDB();
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server,{
-  cors: {
-    origin: "*", // Your Angular app URL
-    methods: ["GET", "POST"],
-    credentials: true
-  }
-});
-
+const corsOptions = {
+  origin: "*", // Allow all origins in development
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  // Include custom auth header used by Flutter client
+  allowedHeaders: ['Content-Type', 'Authorization', 'authorization', 'X-Requested-With', 'x-auth-token', 'X-Auth-Token']
+}
+app.use(cors(corsOptions));
 app.set('io', io);
-app.use(cors());
+
 app.use(express.json());  
 app.use(express.static('public'));
 // Serve uploaded files statically
