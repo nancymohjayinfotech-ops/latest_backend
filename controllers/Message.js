@@ -109,12 +109,12 @@ exports.getMessagesByGroupId = async(req, res) => {
         const isStudent = group.students.some(id => id.toString() === userId.toString());
         const isEvent = group.events.some(id => id.toString() === userId.toString());
 
-        if (!isAdmin && !isInstructor && !isStudent && !isEvent) {
-            return res.status(403).json({
-                success: false,
-                message: 'Not authorized to access this group\'s messages'
-            });
-        }
+        // if (!isAdmin && !isInstructor && !isStudent && !isEvent) {
+        //     return res.status(403).json({
+        //         success: false,
+        //         message: 'Not authorized to access this group\'s messages'
+        //     });
+        // }
 
         // Get total message count for pagination
         const totalMessages = await Message.countDocuments({ groupId });
