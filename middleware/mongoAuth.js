@@ -64,17 +64,19 @@ exports.protect = async (req, res, next) => {
 
     next();
   } catch (error) {
+    let message = 'Invalid access token';
+
     if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({
-        success: false,
-        message: 'Access token expired',
-      });
+      message = 'Access token expired. Please login again';
+    } else if (error.name === 'JsonWebTokenError') {
+      message = 'Access token is malformed or has an invalid signature';
+    } else if (error.name === 'NotBeforeError') {
+      message = 'Access token is not active yet';
     }
-    
-    console.error('JWT verification error:', error);
+
     return res.status(401).json({
       success: false,
-      message: 'Invalid access token',
+      message,
     });
   }
 };
