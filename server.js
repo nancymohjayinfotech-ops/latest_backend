@@ -11,16 +11,27 @@ connectDB();
 
 const app = express();
 const server = http.createServer(app);
+const io = socketIo(server, {
+    cors: {
+        origin: "*", // Your Angular app URL
+        methods: ["GET", "POST"],
+        credentials: true
+    }
+});
+
+
 const corsOptions = {
-  origin: "*", // Allow all origins in development
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  // Include custom auth header used by Flutter client
-  allowedHeaders: ['Content-Type', 'Authorization', 'authorization', 'X-Requested-With', 'x-auth-token', 'X-Auth-Token']
+    origin: "*", // Allow all origins in development
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    // Include custom auth header used by Flutter client
+    allowedHeaders: ['Content-Type', 'Authorization', 'authorization', 'X-Requested-With', 'x-auth-token', 'X-Auth-Token']
 }
 app.use(cors(corsOptions));
-app.set('io', io);
 
-app.use(express.json());  
+
+app.set('io', io);
+app.use(cors());
+app.use(express.json());
 app.use(express.static('public'));
 // Serve uploaded files statically
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -51,7 +62,7 @@ const adminRoutes = require('./routes/admin');
 const notificationRoutes = require('./routes/notifications');
 const deviceTokenRoutes = require('./routes/deviceTokens');
 const chatMediaRoutes = require('./routes/chatMedia');
-// const {seedData} = require('./seedData');
+const { seedData } = require('./seedData');
 const studentRoutes = require('./routes/student');
 // const userRoutes = require('./routes/users');
 const userRoutes = require('./routes/users');
@@ -82,14 +93,14 @@ app.use('/api/chat-media', chatMediaRoutes);
 app.use('/api/student', studentRoutes);
 
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
-// app.get('/seed',(req,res)=>{
-//   seedData();
-//   return res.status(200).json({"status":'done'});
-// })
+app.get('/seed', (req, res) => {
+    seedData();
+    return res.status(200).json({ "status": 'done' });
+})
 app.get('/test/chat', (req, res) => {
-  res.render('chat-test');
+    res.render('chat-test');
 });
 
 const initializeSocket = require('./socket/socketHandler');
@@ -99,8 +110,8 @@ initializeSocket(io);
 const PORT = process.env.PORT || 5000;
 
 server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log('Using MongoDB as database');
+    console.log(`Server running on port ${PORT}`);
+    console.log('Using MongoDB as database');
 });
 
 module.exports = app;
