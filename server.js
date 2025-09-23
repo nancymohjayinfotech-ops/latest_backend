@@ -32,7 +32,7 @@ app.use(morgan('dev'));
 
 const mongoAuthRoutes = require('./routes/mongoAuth');
 const courseRoutes = require('./routes/courses');
-const userRoutes = require('./routes/users');
+// const userRoutes = require('./routes/users');
 const categoryRoutes = require('./routes/categories');
 const subcategoryRoutes = require('./routes/subcategories');
 const contentRoutes = require('./routes/content');
@@ -52,9 +52,12 @@ const adminRoutes = require('./routes/admin');
 const notificationRoutes = require('./routes/notifications');
 const deviceTokenRoutes = require('./routes/deviceTokens');
 const chatMediaRoutes = require('./routes/chatMedia');
-// const {seedData} = require('./seedData');
+const {seedData} = require('./seedData');
 const studentRoutes = require('./routes/student');
+// const userRoutes = require('./routes/users');
+const userRoutes = require('./routes/users');
 
+// app.use('/api/user', userRoutes);
 app.use('/api/auth', mongoAuthRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/user', userRoutes);
@@ -82,6 +85,10 @@ app.use('/api/student', studentRoutes);
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
+app.get('/seed',(req,res)=>{
+  seedData();
+  return res.status(200).json({"status":'done'});
+})
 app.get('/test/chat', (req, res) => {
   res.render('chat-test');
 });
