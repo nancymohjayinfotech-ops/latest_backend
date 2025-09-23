@@ -30,7 +30,7 @@ app.use(cors(corsOptions));
 
 
 app.set('io', io);
-app.use(cors());
+// app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 // Serve uploaded files statically
