@@ -23,8 +23,8 @@ const sendNotification = async ({ recipients, type, title, message, sender = nul
       console.log(`Notification created for user ${userId}`);
 
       // Send push notification to the user
-      if(user){
-      await firebaseService.sendPushNotification(user.deviceTokens[0].token, { title, message }, data);
+      if(user.deviceTokens.length > 0){
+      await firebaseService.sendPushNotificationV2(user.deviceTokens[0].token, { title, message }, data);
       console.log(`Push notification sent to user ${userId}`);
       }
   
