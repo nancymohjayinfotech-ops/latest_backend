@@ -17,9 +17,11 @@ const sendNotification = async ({ recipients, type, title, message, sender = nul
       
       // Use your static method to create the notification in the database
       await Notification.createNotification(notificationPayload);
+      console.log(`Notification created for user ${userId}`);
 
       // Send push notification to the user
       await firebaseService.sendPushNotification(deviceToken, { title, message }, data);
+      console.log(`Push notification sent to user ${userId}`);
 
     } catch (error) {
       console.error(`Failed to create notification for user ${userId}:`, error);
