@@ -23,9 +23,17 @@ const sendNotification = async ({ recipients, type, title, message, sender = nul
       console.log(`Notification created for user ${userId}`);
 
       // Send push notification to the user
-      if(user.deviceTokens.length > 0){
-      await firebaseService.sendPushNotificationV2(user.deviceTokens[0].token, { title, message }, data);
-      console.log(`Push notification sent to user ${userId}`);
+      if (user.deviceTokens.length > 0) {
+        // Sort by lastUsed descending and pick the first one
+        const latestDevice = user.deviceTokens
+          .sort((a, b) => b.lastUsed - a.lastUsed)[0];
+      
+        await firebaseService.sendPushNotificationV2(
+          latestDevice.token,
+          { title, message },
+          data
+        );
+        console.log(`Push notification sent to user ${userId}`);
       }
   
     } catch (error) {
