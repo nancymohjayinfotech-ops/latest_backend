@@ -121,8 +121,7 @@ exports.signupWithPhone = async (req, res) => {
                   type: 'NEW_STUDENT_REGISTERED',
                   title: 'New User Signup',
                   message: `A new ${user.role}, ${user.name}, has just signed up with a phone number.`,
-                  data: { userId: user._id.toString() },
-                  deviceToken: user.deviceTokens[0].token
+                  data: { userId: user._id.toString() }
               });
               console.log("--- 7. Notification sent to admins ---");
           }
@@ -136,8 +135,7 @@ exports.signupWithPhone = async (req, res) => {
                   type: 'NEW_STUDENT_REGISTERED',
                   title: 'A New Learner Joined!',
                   message: `A new student, ${user.name}, has joined MiSkills.`,
-                  data: { userId: user._id.toString() },
-                  deviceToken: user.deviceTokens[0].token
+                  data: { userId: user._id.toString() }
               });
               console.log("--- 9. Notification sent to instructors ---");
           }
@@ -150,7 +148,6 @@ exports.signupWithPhone = async (req, res) => {
               type: user.role === 'student' ? 'WELCOME_STUDENT' : 'WELCOME_INSTRUCTOR',
               title: 'Welcome to MiSkills!',
               message: `Hi ${user.name}, welcome! Your account has been created. Let's start your Journey`,
-              deviceToken: user.deviceTokens[0].token
           });
           console.log("--- 11. Welcome notification sent ---");
       }
@@ -315,8 +312,7 @@ exports.verifyOtp = async (req, res) => {
           type: 'GENERAL',
           title: `Welcome Back, ${user.name}!`,
           message: "It's great to see you again. Let's get started!",
-          data: { userId: user._id.toString() },
-          deviceToken: user.deviceTokens[0].token
+          data: { userId: user._id.toString() }
       });
     } catch (e) {
         console.error("Error sending login notification:", e);
@@ -416,8 +412,7 @@ exports.adminLogin = async (req, res) => {
               type: 'GENERAL',
               title: `Welcome Back, Admin!`,
               message: "Here's what's happening on the platform today.",
-              data: { userId: user._id.toString() },
-              deviceToken: user.deviceTokens[0].token
+              data: { userId: user._id.toString() }
           });
       } catch (e) {
           console.error("Error sending admin login notification:", e);
@@ -441,8 +436,6 @@ exports.adminLogin = async (req, res) => {
 exports.googleLogin = async (req, res) => {
   const { idToken,role } = req.body;
   try {
-    console.log(idToken);
-    
     if (!idToken) {
       return res.status(400).json({ success: false, message: 'No ID token provided' });
     }
