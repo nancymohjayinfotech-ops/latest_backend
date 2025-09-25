@@ -15,8 +15,8 @@ const GOOGLE_CLIENT_IDS = [
 ];
 
 // Generate access token (15 minutes)
-const generateAccessToken = (id, sessionToken) => {
-  return jwt.sign({ id, sessionToken }, process.env.JWT_SECRET, { expiresIn: '1d' });
+const generateAccessToken = (id, name, sessionToken) => {
+  return jwt.sign({ id, name, sessionToken }, process.env.JWT_SECRET, { expiresIn: '1d' });
 };
 
 // Generate refresh token (7 days)
@@ -47,7 +47,6 @@ const sendSms = async (phone, otp) => {
 // Signup with phone number and role
 exports.signupWithPhone = async (req, res) => {
   try {
-    console.log("--- 1. Signup request received ---");
     const { phoneNumber, role } = req.body;
 
     if (!phoneNumber) {
@@ -102,19 +101,14 @@ exports.signupWithPhone = async (req, res) => {
     });
 
     await user.save();
-    console.log(`--- 2. New user ${user.name} saved successfully ---`);
 
     try {
-      console.log("--- 3. Starting notification logic ---");
       if (user.role === 'student' || user.role === 'instructor') {
         const admins = await User.find({ role: 'admin' }).select('_id');
-        console.log(`--- 4. Found ${admins.length} admin(s) ---`);
         const instructors = await User.find({ role: 'instructor' }).select('_id');
-        console.log(`--- 5. Found ${instructors.length} instructor(s) ---`);
 
-          // 1. Notify Admins
+        // 1. Notify Admins
         if (admins.length > 0) {
-          console.log("--- 6. Preparing to send notification to admins... ---");
               await sendNotification({
                   recipients: admins.map(a => a._id),
                   sender: user._id,
@@ -123,12 +117,10 @@ exports.signupWithPhone = async (req, res) => {
                   message: `A new ${user.role}, ${user.name}, has just signed up with a phone number.`,
                   data: { userId: user._id.toString() }
               });
-              console.log("--- 7. Notification sent to admins ---");
           }
 
           // 2. Notify Instructors (if new user is a student)
         if (user.role === 'student' && instructors.length > 0) {
-          console.log("--- 8. Preparing to send notification to instructors... ---");
               await sendNotification({
                   recipients: instructors.map(i => i._id),
                   sender: user._id,
@@ -137,11 +129,9 @@ exports.signupWithPhone = async (req, res) => {
                   message: `A new student, ${user.name}, has joined MiSkills.`,
                   data: { userId: user._id.toString() }
               });
-              console.log("--- 9. Notification sent to instructors ---");
           }
 
           // 3. Send Welcome Notification to the new user
-          console.log("--- 10. Preparing to send welcome notification to the new user... ---");
           await sendNotification({
               recipients: [user._id],
               sender: null,
@@ -149,7 +139,6 @@ exports.signupWithPhone = async (req, res) => {
               title: 'Welcome to MiSkills!',
               message: `Hi ${user.name}, welcome! Your account has been created. Let's start your Journey`,
           });
-          console.log("--- 11. Welcome notification sent ---");
       }
     } catch (notificationError) {
       console.error('--- !!! NOTIFICATION LOGIC FAILED !!! ---:', notificationError);
@@ -166,7 +155,6 @@ exports.signupWithPhone = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('--- !!! SIGNUP FAILED CRITICALLY !!! ---:', error);
     res.status(500).json({
       success: false,
       message: 'Error during signup',
@@ -320,7 +308,7 @@ exports.verifyOtp = async (req, res) => {
 
     // Generate session token first
     const sessionToken = generateSessionToken();
-    const accessToken = generateAccessToken(user._id, sessionToken);
+    const accessToken = generateAccessToken(user._id,user.name, sessionToken);
     const refreshToken = generateRefreshToken(user._id);
     
     const refreshTokenExpiry = new Date();
@@ -419,7 +407,7 @@ exports.adminLogin = async (req, res) => {
       }
 
       const sessionToken = generateSessionToken();
-      const accessToken = generateAccessToken(user._id, sessionToken);
+      const accessToken = generateAccessToken(user._id,user.name, sessionToken);
       
       res.status(200).json({
           success: true,
@@ -473,7 +461,7 @@ exports.googleLogin = async (req, res) => {
     }
 
     const sessionToken = generateSessionToken();
-    const accessToken = generateAccessToken(user._id, sessionToken);
+    const accessToken = generateAccessToken(user._id,user.name, sessionToken);
     const refreshToken = generateRefreshToken(user._id);
     
     const refreshTokenExpiry = new Date();
@@ -633,7 +621,7 @@ exports.refreshToken = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Invalid refresh token or token expired' });
     }
     
-    const accessToken = generateAccessToken(user._id, user.sessionToken);
+    const accessToken = generateAccessToken(user._id,user.name, user.sessionToken);
     res.status(200).json({
       success: true,
       message: 'Token refreshed successfully',
@@ -649,15 +637,3 @@ exports.refreshToken = async (req, res) => {
     });
   }
 };
-
-// module.exports = {
-//     signupWithPhone,
-//     sendOtp,
-//     verifyOtp,
-//     adminLogin,
-//     googleLogin,
-//     getMe,
-//     logout,
-//     registerAdmin,
-//     refreshToken,
-// };

@@ -1,22 +1,34 @@
 const messageController = require('../controllers/Message');
 const { getEncryptionInstance } = require('../utils/encryption');
 const Message = require('../models/Message');
+const jwt = require('jsonwebtoken');
 
 function initializeSocket(io) {
     io.on('connection', (socket) => {
         console.log('🔗 New client connected:', socket.id);
 
         // Store user data when they authenticate
-        socket.on('authenticate', (userData) => {
-            console.log('📥 authenticate event received:', userData);
+        // socket.on('authenticate', (userData) => {
+        //     console.log('📥 authenticate event received:', userData);
         
-            if (userData && userData.userId) {
-                socket.userData = userData;
-                console.log(`✅ User authenticated: ${userData.userId} (${userData.name})`);
-            } else {
-                console.warn('⚠️ Authentication failed, invalid userData:', userData);
+        //     if (userData && userData.userId) {
+        //         socket.userData = userData;
+        //         console.log(`✅ User authenticated: ${userData.userId} (${userData.name})`);
+        //     } else {
+        //         console.warn('⚠️ Authentication failed, invalid userData:', userData);
+        //     }
+        // });
+
+        socket.on('authenticate', (userData) => {
+            const decoded = jwt.verify(userData.token, process.env.JWT_SECRET);
+            if (decoded && decoded.id) {
+              // Store user data in socket for later use
+              socket.userData = {
+                userId: decoded.id,
+                name: decoded.name,
+              };
             }
-        });
+          });
 
         // Join a group chat room
         socket.on('joinGroup', (data, callback) => {
