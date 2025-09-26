@@ -104,11 +104,13 @@ exports.getMessagesByGroupId = async(req, res) => {
 
         // Check if user is a member of the group
         const userId = req.user.id;
-        const isAdmin = group.admin.toString() === userId.toString();
-        const isInstructor = group.instructors.some(id => id.toString() === userId.toString());
-        const isStudent = group.students.some(id => id.toString() === userId.toString());
 
-        // if (!isAdmin && !isInstructor && !isStudent) {
+        // const isAdmin = group.admin.toString() === userId.toString();
+        // const isInstructor = group.instructors.some(id => id.toString() === userId.toString());
+        // const isStudent = group.students.some(id => id.toString() === userId.toString());
+        // const isEvent = group.events.some(id => id.toString() === userId.toString());
+
+        // if (!isAdmin && !isInstructor && !isStudent && !isEvent) {
         //     return res.status(403).json({
         //         success: false,
         //         message: 'Not authorized to access this group\'s messages'
@@ -149,6 +151,12 @@ exports.getMessagesByGroupId = async(req, res) => {
             success: true,
             message: 'Messages retrieved successfully',
             data: {
+                groupDetail:{
+                    students:group.students?.length ? group.students?.length : 0,
+                    instructors:group.instructors?.length ? group.instructors?.length : 0,
+                    events:group.events?.length ? group.events?.length : 0,
+                    memebers:group.students?.length + group.instructors?.length + group.events?.length ,
+                },
                 messages: messagesWithReadStatus,
                 pagination: {
                     currentPage: pageNum,
